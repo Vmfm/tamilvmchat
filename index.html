@@ -1,1 +1,108 @@
-<div style="height: 500px;"><div id="rt-9b1f3f6fdd2a9a8efc03d866c725e061"></div> <script src="https://rumbletalk.com/client/?h721VrtX"></script></div>
+<!DOCTYPE html>
+<head><title></title></head>
+<body>
+
+<div id="rt-9b1f3f6fdd2a9a8efc03d866c725e061"></div> <script src="https://rumbletalk.com/client/?h721VrtX"></script>
+
+</body>
+</html>
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Download App Popup</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Overlay */
+    .popup-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    /* Popup Box */
+    .popup-box {
+      position: relative;
+      background: #fff;
+      padding: 30px 20px 20px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .popup-box h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .popup-box a.download-btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 12px 20px;
+      background: #1b9cfc;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
+
+    .popup-box a.download-btn:hover {
+      background: #0c7cd5;
+    }
+
+    /* Close Button Inside Popup */
+    .popup-box .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 22px;
+      color: #888;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .popup-box .close-btn:hover {
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Popup Overlay -->
+<div class="popup-overlay" id="popup">
+  <div class="popup-box">
+    <span class="close-btn" onclick="document.getElementById('popup').style.display='none'">×</span>
+    <h2>Download our Android application from Play Store<br>Get better experience make more friends!</h2>
+    <a class="download-btn" href="market://details?id=vm.chat" target="_blank">Download from Play Store</a>
+  </div>
+</div>
+
+<script>
+  // Optional: Auto-hide popup after 10 seconds
+  setTimeout(function () {
+    document.getElementById('popup').style.display = 'none';
+  }, 10000);
+</script>
+
+</body>
+</html>
