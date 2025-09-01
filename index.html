@@ -1,22 +1,9 @@
 <!DOCTYPE html>
-<head><title></title></head>
-<body>
-
-<div style="height: 500px;"><div id="rt-9b1f3f6fdd2a9a8efc03d866c725e061"></div> <script src="https://rumbletalk.com/client/?h721VrtX"></script></div>
-
-</body>
-</html>
-
-
-
-
-
-
-<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Download App Popup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Responsive Chat + App Popup</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -24,7 +11,13 @@
       padding: 0;
     }
 
-    /* Overlay */
+    /* Chat container */
+    .chat-container {
+      height: 500px;
+      width: 100%;
+    }
+
+    /* Popup Overlay */
     .popup-overlay {
       position: fixed;
       top: 0; left: 0;
@@ -84,15 +77,38 @@
     .popup-box .close-btn:hover {
       color: #000;
     }
+
+    /* Responsive tweaks */
+    @media (max-width: 600px) {
+      .popup-box {
+        width: 90%;
+        padding: 20px 15px 15px;
+      }
+
+      .popup-box h2 {
+        font-size: 16px;
+      }
+
+      .popup-box a.download-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 <body>
+
+<!-- Chat Embed -->
+<div class="chat-container">
+  <div id="rt-9b1f3f6fdd2a9a8efc03d866c725e061"></div>
+  <script src="https://rumbletalk.com/client/?h721VrtX"></script>
+</div>
 
 <!-- Popup Overlay -->
 <div class="popup-overlay" id="popup">
   <div class="popup-box">
     <span class="close-btn" onclick="document.getElementById('popup').style.display='none'">×</span>
-    <h2>Download our Android application from Play Store<br>Get better experience make more friends!</h2>
+    <h2>Download our Android application from Play Store<br>Get better experience, make more friends!</h2>
     <a class="download-btn" href="market://details?id=vm.chat" target="_blank">Download from Play Store</a>
   </div>
 </div>
