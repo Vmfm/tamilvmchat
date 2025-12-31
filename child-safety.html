@@ -7,7 +7,7 @@
 <style>
 body {
     font-family: Arial, Helvetica, sans-serif;
-    background: #f7f7f7;
+    background: #f0f8ff;
     color: #222;
     line-height: 1.6;
     margin: 0;
@@ -18,22 +18,41 @@ body {
     background: #ffffff;
     margin: auto;
     padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
 }
-h1, h2 {
+h1 {
     color: #d32f2f;
 }
-hr {
-    margin: 30px 0;
+h2 {
+    color: #1976d2;
 }
-ul {
-    padding-left: 20px;
+ul li {
+    color: #555;
+}
+.button-container {
+    text-align: right;
+    margin-bottom: 20px;
+}
+button.toggle-btn {
+    background: #4caf50;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+button.toggle-btn:hover {
+    background: #45a049;
 }
 .footer {
     margin-top: 30px;
     font-size: 14px;
     color: #555;
+}
+.hidden {
+    display: none;
 }
 </style>
 </head>
@@ -41,6 +60,12 @@ ul {
 <body>
 <div class="container">
 
+<div class="button-container">
+    <button class="toggle-btn" onclick="toggleLanguage()">Switch English / Tamil</button>
+</div>
+
+<!-- English Version -->
+<div id="english">
 <h1>Child Safety Standards – Tamil VM Chat</h1>
 <p><strong>Effective Date:</strong> 01 January 2025</p>
 
@@ -51,9 +76,6 @@ Child Sexual Abuse and Exploitation (CSAE).
 </p>
 
 <h2>1. Prohibited Content and Behavior</h2>
-<p>
-Tamil VM Chat strictly prohibits the following:
-</p>
 <ul>
 <li>Any form of Child Sexual Abuse and Exploitation (CSAE)</li>
 <li>Sexual content involving minors</li>
@@ -61,14 +83,7 @@ Tamil VM Chat strictly prohibits the following:
 <li>Sharing, creating, uploading, or distributing Child Sexual Abuse Material (CSAM)</li>
 </ul>
 
-<p>
-Any account found violating these rules will be immediately suspended or permanently banned.
-</p>
-
 <h2>2. Detection and Enforcement</h2>
-<p>
-To protect children, Tamil VM Chat:
-</p>
 <ul>
 <li>Monitors user activity and reported content</li>
 <li>Removes harmful or illegal content immediately</li>
@@ -77,25 +92,19 @@ To protect children, Tamil VM Chat:
 </ul>
 
 <h2>3. Reporting Child Safety Concerns</h2>
-<p>
-Users can report any child safety concerns or inappropriate content through the app or by contacting us at:
-</p>
-<p>
-📧 <strong>Email:</strong> veera4u123@gmail.com
-</p>
-
-<p>
-All reports related to child safety are reviewed with the highest priority.
-</p>
+<p>Users can report any child safety concerns or inappropriate content through the app or by contacting us at:</p>
+<p>📧 <strong>Email:</strong> veera4u123@gmail.com</p>
 
 <h2>4. Legal Compliance</h2>
-<p>
-Tamil VM Chat complies with all applicable child protection laws and cooperates fully with law enforcement agencies when required.
-</p>
+<p>Tamil VM Chat complies with all applicable child protection laws and cooperates fully with law enforcement agencies when required.</p>
 
 <hr>
+</div>
 
+<!-- Tamil Version -->
+<div id="tamil" class="hidden">
 <h1>குழந்தை பாதுகாப்பு தரநிலைகள் – Tamil VM Chat</h1>
+<p><strong>பயன்பாட்டு தேதி:</strong> 01 ஜனவரி 2025</p>
 
 <p>
 Tamil VM Chat அனைத்து பயனர்களுக்கும், குறிப்பாக குழந்தைகளுக்கும் பாதுகாப்பான சூழலை வழங்க உறுதியாக உள்ளது.
@@ -103,9 +112,6 @@ Tamil VM Chat அனைத்து பயனர்களுக்கும், 
 </p>
 
 <h2>1. தடைசெய்யப்பட்ட உள்ளடக்கம் மற்றும் நடத்தை</h2>
-<p>
-Tamil VM Chat இல் கீழ்கண்டவை கடுமையாக தடை செய்யப்படுகின்றன:
-</p>
 <ul>
 <li>எந்த வகையான குழந்தை பாலியல் துஷ்பிரயோகம் மற்றும் சுரண்டல் (CSAE)</li>
 <li>சிறார்களை உட்படுத்திய பாலியல் உள்ளடக்கம்</li>
@@ -113,14 +119,7 @@ Tamil VM Chat இல் கீழ்கண்டவை கடுமையாக 
 <li>குழந்தை பாலியல் துஷ்பிரயோக உள்ளடக்கங்களை (CSAM) உருவாக்குதல், பகிர்தல் அல்லது பதிவேற்றுதல்</li>
 </ul>
 
-<p>
-இந்த விதிகளை மீறும் கணக்குகள் உடனடியாக முடக்கப்படும் அல்லது நிரந்தரமாக தடை செய்யப்படும்.
-</p>
-
 <h2>2. கண்காணிப்பு மற்றும் நடவடிக்கை</h2>
-<p>
-குழந்தைகளின் பாதுகாப்பிற்காக, Tamil VM Chat:
-</p>
 <ul>
 <li>பயனர் நடவடிக்கைகள் மற்றும் புகார்களை கண்காணிக்கிறது</li>
 <li>சட்டவிரோத அல்லது தீங்கான உள்ளடக்கங்களை உடனடியாக நீக்குகிறது</li>
@@ -129,21 +128,14 @@ Tamil VM Chat இல் கீழ்கண்டவை கடுமையாக 
 </ul>
 
 <h2>3. புகார் அளித்தல்</h2>
-<p>
-குழந்தை பாதுகாப்பு தொடர்பான புகார்களை கீழ்கண்ட மின்னஞ்சல் முகவரியில் தெரிவிக்கலாம்:
-</p>
-<p>
-📧 <strong>மின்னஞ்சல்:</strong> veera4u123@gmail.com
-</p>
-
-<p>
-அனைத்து குழந்தை பாதுகாப்பு புகார்களும் மிக உயர்ந்த முன்னுரிமையுடன் பரிசீலிக்கப்படும்.
-</p>
+<p>குழந்தை பாதுகாப்பு தொடர்பான புகார்களை கீழ்கண்ட மின்னஞ்சல் முகவரியில் தெரிவிக்கலாம்:</p>
+<p>📧 <strong>மின்னஞ்சல்:</strong> veera4u123@gmail.com</p>
 
 <h2>4. சட்டப் பின்பற்றல்</h2>
-<p>
-Tamil VM Chat அனைத்து குழந்தை பாதுகாப்பு சட்டங்களையும் பின்பற்றுகிறது மற்றும் தேவையானபோது சட்ட அமலாக்க அமைப்புகளுடன் முழுமையாக ஒத்துழைக்கிறது.
-</p>
+<p>Tamil VM Chat அனைத்து குழந்தை பாதுகாப்பு சட்டங்களையும் பின்பற்றுகிறது மற்றும் தேவையானபோது சட்ட அமலாக்க அமைப்புகளுடன் முழுமையாக ஒத்துழைக்கிறது.</p>
+
+<hr>
+</div>
 
 <div class="footer">
 <p>
@@ -152,6 +144,20 @@ Tamil VM Chat அனைத்து குழந்தை பாதுகாப�
 © 2025 Tamil VM Chat. All rights reserved.
 </p>
 </div>
+
+<script>
+function toggleLanguage() {
+    var eng = document.getElementById('english');
+    var tam = document.getElementById('tamil');
+    if (eng.classList.contains('hidden')) {
+        eng.classList.remove('hidden');
+        tam.classList.add('hidden');
+    } else {
+        eng.classList.add('hidden');
+        tam.classList.remove('hidden');
+    }
+}
+</script>
 
 </div>
 </body>
