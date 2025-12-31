@@ -21,8 +21,15 @@ body {
     border-radius: 10px;
     box-shadow: 0 0 15px rgba(0,0,0,0.2);
 }
+.logo {
+    display: block;
+    margin: 0 auto 20px auto;
+    width: 150px; /* adjust as needed */
+    height: auto;
+}
 h1 {
     color: #d32f2f;
+    text-align: center;
 }
 h2 {
     color: #1976d2;
@@ -50,6 +57,7 @@ button.toggle-btn:hover {
     margin-top: 30px;
     font-size: 14px;
     color: #555;
+    text-align: center;
 }
 .hidden {
     display: none;
@@ -59,6 +67,9 @@ button.toggle-btn:hover {
 
 <body>
 <div class="container">
+
+<!-- Logo -->
+<img src="https://vmfm.github.io/tamilvmchat/images/tamilvmchat.png" alt="Tamil VM Chat Logo" class="logo">
 
 <div class="button-container">
     <button class="toggle-btn" onclick="toggleLanguage()">Switch English / Tamil</button>
