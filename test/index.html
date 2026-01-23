@@ -2,34 +2,34 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tamil VM Chat</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
 <style>
-body{margin:0;background:#0f0f0f;color:#fff;font-family:sans-serif}
+body{margin:0;font-family:sans-serif;background:#111;color:#fff}
 .hidden{display:none}
-.card{background:#1b1b1b;padding:15px;border-radius:12px}
-.center{display:flex;justify-content:center;align-items:center;height:100vh}
-input,select,button{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none}
-button{background:#00e676;font-weight:bold}
-.top{display:flex;justify-content:space-between;padding:10px;background:#000}
-.user{display:flex;align-items:center;padding:10px;border-bottom:1px solid #333}
+.center{display:flex;align-items:center;justify-content:center;height:100vh}
+.card{background:#1c1c1c;padding:20px;border-radius:12px;width:90%;max-width:350px}
+input,select,button{width:100%;padding:10px;margin-top:10px;border-radius:8px;border:none}
+button{background:#00c853;color:#000;font-weight:bold}
+.user{display:flex;align-items:center;padding:10px;border-bottom:1px solid #333;cursor:pointer}
 .user img{width:50px;height:50px;border-radius:50%;margin-right:10px}
 .dot{width:10px;height:10px;border-radius:50%;margin-left:auto}
-.on{background:#00e676}
-.off{background:#444}
-.popup{position:fixed;top:0;left:0;width:100%;height:100%;background:#000c;display:flex;justify-content:center;align-items:center}
-.chat{height:50vh;overflow:auto;border:1px solid #333;padding:8px}
-.msg{margin:4px}
+.online{background:#00e676}
+.offline{background:#555}
+.topbar{display:flex;justify-content:space-between;padding:10px;background:#000}
+.badge{background:red;border-radius:50%;padding:3px 7px;font-size:12px}
+.popup{position:fixed;top:0;left:0;width:100%;height:100%;background:#000c}
+.popup .card{height:90%}
+.chat{height:60vh;overflow-y:auto;border:1px solid #333;padding:10px}
+.msg{margin:5px 0}
 .me{text-align:right;color:#00e676}
-.badge{background:red;border-radius:50%;padding:2px 6px}
-.timer{color:#0f0;text-align:center}
+.timer{color:#0f0}
 </style>
 </head>
 
@@ -37,11 +37,14 @@ button{background:#00e676;font-weight:bold}
 
 <!-- LOGIN -->
 <div id="login" class="center">
-  <div class="card" style="width:300px">
+  <div class="card">
     <h3>Login</h3>
     <input id="name" placeholder="Name">
     <input id="age" type="number" placeholder="Age">
-    <select id="gender"><option>Male</option><option>Female</option></select>
+    <select id="gender">
+      <option>Male</option>
+      <option>Female</option>
+    </select>
     <input type="file" id="img">
     <button onclick="login()">Continue</button>
   </div>
@@ -49,168 +52,152 @@ button{background:#00e676;font-weight:bold}
 
 <!-- MAIN -->
 <div id="main" class="hidden">
-  <div class="top">
-    <b>Tamil VM Chat</b>
+  <div class="topbar">
+    <div>Tamil VM Chat</div>
     <div>
       🔔 <span id="unread" class="badge hidden">0</span>
-      ⚙️ <button onclick="openSettings()">⚙️</button>
+      ⚙️ <button onclick="settings()">⚙️</button>
     </div>
   </div>
   <div id="users"></div>
 </div>
 
-<!-- CHAT -->
+<!-- CHAT POPUP -->
 <div id="chatPop" class="popup hidden">
-<div class="card" style="width:90%;max-width:400px">
-<h3 id="chatName"></h3>
-<div class="chat" id="chatBox"></div>
-<input id="msg" placeholder="Message">
-<button onclick="sendMsg()">Send</button>
-<button onclick="callUser()">📞 Audio Call</button>
-<button onclick="blockUser()">🚫 Block</button>
-<button onclick="closeChat()">Close</button>
-</div>
-</div>
-
-<!-- INCOMING CALL -->
-<div id="callPop" class="popup hidden">
-<div class="card">
-<h3 id="callText">Incoming Call</h3>
-<div class="timer" id="callTimer"></div>
-<button onclick="acceptCall()">Accept</button>
-<button onclick="rejectCall()">Reject</button>
-</div>
-</div>
-
-<!-- SETTINGS -->
-<div id="settings" class="popup hidden">
-<div class="card" style="width:300px">
-<h3>Settings</h3>
-<button onclick="editProfile()">Edit Profile</button>
-<button onclick="logout()">Logout</button>
-<button onclick="closeSettings()">Close</button>
-</div>
+  <div class="card">
+    <h3 id="chatName"></h3>
+    <div class="chat" id="chatBox"></div>
+    <input id="msg" placeholder="Message">
+    <button onclick="sendMsg()">Send</button>
+    <button onclick="startCall()">🎧 Audio Call</button>
+    <button onclick="blockUser()">🚫 Block</button>
+    <button onclick="closeChat()">Close</button>
+    <div class="timer" id="callTimer"></div>
+  </div>
 </div>
 
 <script>
-/* FIREBASE */
+/* FIREBASE CONFIG */
 firebase.initializeApp({
- apiKey:"AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
- authDomain:"tamil-chat-2d54e.firebaseapp.com",
- databaseURL:"https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
- projectId:"tamil-chat-2d54e",
- storageBucket:"tamil-chat-2d54e.appspot.com",
- messagingSenderId:"804705969240",
- appId:"1:804705969240:web:658df281dd8360843c162d"
+  apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+  authDomain: "tamil-chat-2d54e.firebaseapp.com",
+  databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+  projectId: "tamil-chat-2d54e",
+  storageBucket: "tamil-chat-2d54e.appspot.com",
+  messagingSenderId: "804705969240",
+  appId: "1:804705969240:web:658df281dd8360843c162d"
 });
 
-const db=firebase.database();
-const storage=firebase.storage();
+const db = firebase.database();
+const storage = firebase.storage();
 
-let me=JSON.parse(localStorage.getItem("me"));
-let peer,stream,currentChat,callTimerInt;
+let me = JSON.parse(localStorage.getItem("me"));
+let currentChat = null;
+let unread = 0;
 
 /* AUTO LOGIN */
-if(me){login.classList.add("hidden");main.classList.remove("hidden");online(true);loadUsers();}
+if(me){
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("main").classList.remove("hidden");
+  setOnline(true);
+  loadUsers();
+}
 
 /* LOGIN */
 function login(){
- const id=Date.now();
- const file=img.files[0];
- storage.ref("profiles/"+id).put(file).then(r=>r.ref.getDownloadURL().then(url=>{
-   me={id,name:name.value,age:age.value,gender:gender.value,img:url,online:true};
-   db.ref("users/"+id).set(me);
-   localStorage.setItem("me",JSON.stringify(me));
-   location.reload();
- }));
+  const id = Date.now();
+  const file = img.files[0];
+  const ref = storage.ref("profiles/"+id);
+  ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
+    me = {id,name:name.value,age:age.value,gender:gender.value,img:url,online:true};
+    db.ref("users/"+id).set(me);
+    localStorage.setItem("me",JSON.stringify(me));
+    location.reload();
+  }));
 }
 
-/* ONLINE */
-function online(v){db.ref("users/"+me.id+"/online").set(v);}
-window.onbeforeunload=()=>online(false);
+/* ONLINE STATUS */
+function setOnline(v){
+  db.ref("users/"+me.id+"/online").set(v);
+  window.onbeforeunload=()=>setOnline(false);
+}
 
-/* USERS */
+/* LOAD USERS */
 function loadUsers(){
- db.ref("users").on("value",s=>{
-  users.innerHTML="";
-  s.forEach(u=>{
-   if(u.key==me.id)return;
-   let d=u.val();
-   users.innerHTML+=`
-   <div class="user" onclick="openChat(${u.key},'${d.name}')">
-    <img src="${d.img}">
-    ${d.name}, ${d.age}
-    <div class="dot ${d.online?'on':'off'}"></div>
-   </div>`;
+  db.ref("users").on("value",s=>{
+    users.innerHTML="";
+    s.forEach(u=>{
+      if(u.key==me.id)return;
+      const d=u.val();
+      users.innerHTML+=`
+      <div class="user" onclick="openChat(${u.key},'${d.name}')">
+        <img src="${d.img}">
+        ${d.name}, ${d.age}
+        <div class="dot ${d.online?'online':'offline'}"></div>
+      </div>`;
+    });
   });
- });
 }
 
 /* CHAT */
 function openChat(id,name){
- currentChat=id;
- chatName.innerText=name;
- chatBox.innerHTML="";
- chatPop.classList.remove("hidden");
- db.ref("chat/"+me.id+"_"+id).on("child_added",s=>{
-  let m=s.val();
-  chatBox.innerHTML+=`<div class="msg ${m.from==me.id?'me':''}">${m.text}</div>`;
- });
+  currentChat=id;
+  chatName.innerText=name;
+  chatBox.innerHTML="";
+  chatPop.classList.remove("hidden");
+
+  db.ref("chats/"+me.id+"_"+id).on("child_added",s=>{
+    const m=s.val();
+    chatBox.innerHTML+=`<div class="msg ${m.from==me.id?'me':''}">${m.text}</div>`;
+  });
 }
+
 function sendMsg(){
- let t=msg.value; msg.value="";
- let m={from:me.id,text:t,time:Date.now()};
- db.ref("chat/"+me.id+"_"+currentChat).push(m);
- db.ref("chat/"+currentChat+"_"+me.id).push(m);
-}
-
-/* AUDIO CALL */
-function callUser(){
- db.ref("calls/"+currentChat).set({from:me.id,status:"ring"});
-}
-db.ref("calls/"+me?.id).on("value",s=>{
- if(!s.exists())return;
- callPop.classList.remove("hidden");
-});
-
-function acceptCall(){
- callPop.classList.add("hidden");
- startCall();
-}
-function rejectCall(){
- callPop.classList.add("hidden");
- db.ref("calls/"+me.id).remove();
-}
-function startCall(){
- navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
-  stream=s;
-  startTimer();
- });
-}
-function startTimer(){
- let sec=0;
- callTimerInt=setInterval(()=>{
-  sec++;
-  callTimer.innerText="Call Time: "+sec+"s";
- },1000);
+  const text=msg.value;
+  msg.value="";
+  const data={from:me.id,text,time:Date.now()};
+  db.ref("chats/"+me.id+"_"+currentChat).push(data);
+  db.ref("chats/"+currentChat+"_"+me.id).push(data);
 }
 
 /* BLOCK */
 function blockUser(){
- db.ref("blocked/"+me.id+"/"+currentChat).set(true);
- alert("Blocked");
+  db.ref("blocked/"+me.id+"/"+currentChat).set(true);
+  alert("Blocked");
+}
+
+/* CLOSE */
+function closeChat(){
+  chatPop.classList.add("hidden");
+}
+
+/* AUDIO CALL (BASIC) */
+let pc,stream,timer;
+function startCall(){
+  navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
+    stream=s;
+    pc=new RTCPeerConnection();
+    stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+    startTimer();
+  });
+}
+
+function startTimer(){
+  let sec=0;
+  timer=setInterval(()=>{
+    sec++;
+    callTimer.innerText="Call Time: "+sec+"s";
+  },1000);
 }
 
 /* SETTINGS */
-function openSettings(){settings.classList.remove("hidden");}
-function closeSettings(){settings.classList.add("hidden");}
-function editProfile(){alert("Profile edit UI can be expanded")}
-function logout(){
- online(false);
- localStorage.clear();
- location.reload();
+function settings(){
+  if(confirm("Logout?")){
+    localStorage.clear();
+    setOnline(false);
+    location.reload();
+  }
 }
-function closeChat(){chatPop.classList.add("hidden");}
 </script>
 
 </body>
