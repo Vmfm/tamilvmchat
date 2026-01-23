@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tamil VM Chat</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
@@ -23,13 +22,10 @@ button{background:#00c853;color:#000;font-weight:bold}
 .online{background:#00e676}
 .offline{background:#555}
 .topbar{display:flex;justify-content:space-between;padding:10px;background:#000}
-.badge{background:red;border-radius:50%;padding:3px 7px;font-size:12px}
 .popup{position:fixed;top:0;left:0;width:100%;height:100%;background:#000c}
-.popup .card{height:90%}
 .chat{height:60vh;overflow-y:auto;border:1px solid #333;padding:10px}
 .msg{margin:5px 0}
 .me{text-align:right;color:#00e676}
-.timer{color:#0f0}
 </style>
 </head>
 
@@ -42,10 +38,11 @@ button{background:#00c853;color:#000;font-weight:bold}
     <input id="name" placeholder="Name">
     <input id="age" type="number" placeholder="Age">
     <select id="gender">
+      <option value="">Select Gender</option>
       <option>Male</option>
       <option>Female</option>
     </select>
-    <input type="file" id="img">
+    <input type="file" id="img" accept="image/*">
     <button onclick="login()">Continue</button>
   </div>
 </div>
@@ -54,30 +51,24 @@ button{background:#00c853;color:#000;font-weight:bold}
 <div id="main" class="hidden">
   <div class="topbar">
     <div>Tamil VM Chat</div>
-    <div>
-      🔔 <span id="unread" class="badge hidden">0</span>
-      ⚙️ <button onclick="settings()">⚙️</button>
-    </div>
+    <button onclick="logout()">Logout</button>
   </div>
   <div id="users"></div>
 </div>
 
-<!-- CHAT POPUP -->
+<!-- CHAT -->
 <div id="chatPop" class="popup hidden">
   <div class="card">
     <h3 id="chatName"></h3>
     <div class="chat" id="chatBox"></div>
     <input id="msg" placeholder="Message">
     <button onclick="sendMsg()">Send</button>
-    <button onclick="startCall()">🎧 Audio Call</button>
-    <button onclick="blockUser()">🚫 Block</button>
     <button onclick="closeChat()">Close</button>
-    <div class="timer" id="callTimer"></div>
   </div>
 </div>
 
 <script>
-/* FIREBASE CONFIG */
+/* FIREBASE */
 firebase.initializeApp({
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -93,43 +84,71 @@ const storage = firebase.storage();
 
 let me = JSON.parse(localStorage.getItem("me"));
 let currentChat = null;
-let unread = 0;
 
 /* AUTO LOGIN */
 if(me){
-  document.getElementById("login").classList.add("hidden");
-  document.getElementById("main").classList.remove("hidden");
+  showMain();
   setOnline(true);
   loadUsers();
 }
 
-/* LOGIN */
+/* LOGIN FIXED */
 function login(){
-  const id = Date.now();
+  const n = name.value.trim();
+  const a = age.value.trim();
+  const g = gender.value;
   const file = img.files[0];
+
+  if(!n || !a || !g || !file){
+    alert("Please fill all details");
+    return;
+  }
+
+  const id = Date.now();
   const ref = storage.ref("profiles/"+id);
-  ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
-    me = {id,name:name.value,age:age.value,gender:gender.value,img:url,online:true};
-    db.ref("users/"+id).set(me);
-    localStorage.setItem("me",JSON.stringify(me));
-    location.reload();
-  }));
+
+  ref.put(file).then(()=>{
+    ref.getDownloadURL().then(url=>{
+      me = {
+        id: id,
+        name: n,
+        age: a,
+        gender: g,
+        img: url,
+        online: true
+      };
+      db.ref("users/"+id).set(me);
+      localStorage.setItem("me",JSON.stringify(me));
+      showMain();
+      setOnline(true);
+      loadUsers();
+    });
+  }).catch(e=>{
+    alert("Image upload failed");
+  });
 }
 
-/* ONLINE STATUS */
+/* UI */
+function showMain(){
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("main").classList.remove("hidden");
+}
+
+/* ONLINE */
 function setOnline(v){
+  if(!me) return;
   db.ref("users/"+me.id+"/online").set(v);
-  window.onbeforeunload=()=>setOnline(false);
+  window.onbeforeunload = ()=>db.ref("users/"+me.id+"/online").set(false);
 }
 
-/* LOAD USERS */
+/* USERS */
 function loadUsers(){
-  db.ref("users").on("value",s=>{
+  db.ref("users").on("value",snap=>{
     users.innerHTML="";
-    s.forEach(u=>{
-      if(u.key==me.id)return;
-      const d=u.val();
-      users.innerHTML+=`
+    snap.forEach(u=>{
+      if(u.key == me.id) return;
+      const d = u.val();
+      users.innerHTML += `
       <div class="user" onclick="openChat(${u.key},'${d.name}')">
         <img src="${d.img}">
         ${d.name}, ${d.age}
@@ -141,29 +160,24 @@ function loadUsers(){
 
 /* CHAT */
 function openChat(id,name){
-  currentChat=id;
-  chatName.innerText=name;
+  currentChat = id;
+  chatName.innerText = name;
   chatBox.innerHTML="";
   chatPop.classList.remove("hidden");
 
+  db.ref("chats/"+me.id+"_"+id).off();
   db.ref("chats/"+me.id+"_"+id).on("child_added",s=>{
     const m=s.val();
-    chatBox.innerHTML+=`<div class="msg ${m.from==me.id?'me':''}">${m.text}</div>`;
+    chatBox.innerHTML += `<div class="msg ${m.from==me.id?'me':''}">${m.text}</div>`;
   });
 }
 
 function sendMsg(){
-  const text=msg.value;
-  msg.value="";
-  const data={from:me.id,text,time:Date.now()};
+  if(!msg.value) return;
+  const data={from:me.id,text:msg.value,time:Date.now()};
   db.ref("chats/"+me.id+"_"+currentChat).push(data);
   db.ref("chats/"+currentChat+"_"+me.id).push(data);
-}
-
-/* BLOCK */
-function blockUser(){
-  db.ref("blocked/"+me.id+"/"+currentChat).set(true);
-  alert("Blocked");
+  msg.value="";
 }
 
 /* CLOSE */
@@ -171,32 +185,11 @@ function closeChat(){
   chatPop.classList.add("hidden");
 }
 
-/* AUDIO CALL (BASIC) */
-let pc,stream,timer;
-function startCall(){
-  navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
-    stream=s;
-    pc=new RTCPeerConnection();
-    stream.getTracks().forEach(t=>pc.addTrack(t,stream));
-    startTimer();
-  });
-}
-
-function startTimer(){
-  let sec=0;
-  timer=setInterval(()=>{
-    sec++;
-    callTimer.innerText="Call Time: "+sec+"s";
-  },1000);
-}
-
-/* SETTINGS */
-function settings(){
-  if(confirm("Logout?")){
-    localStorage.clear();
-    setOnline(false);
-    location.reload();
-  }
+/* LOGOUT */
+function logout(){
+  db.ref("users/"+me.id+"/online").set(false);
+  localStorage.clear();
+  location.reload();
 }
 </script>
 
