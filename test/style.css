@@ -1,0 +1,18 @@
+body { font-family: Arial; background:#f3f3f3; }
+.login-box, .chat { width:300px; margin:auto; background:#fff; padding:20px; }
+
+input, select, button {
+  width:100%;
+  margin:5px 0;
+  padding:8px;
+}
+
+.card {
+  background:#fff;
+  padding:10px;
+  margin:5px;
+  cursor:pointer;
+}
+
+.on { color:green; }
+.off { color:red; }
