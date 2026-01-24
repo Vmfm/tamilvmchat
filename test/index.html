@@ -1,124 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dating App – Find Your Match</title>
-  <style>
-    * { box-sizing: border-box; font-family: Arial, sans-serif; }
-    body { margin: 0; background: #f4f6fb; }
-    header { background: #ff4d6d; color: #fff; padding: 20px; text-align: center; }
-    header h1 { margin: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dating App – Firebase Demo</title>
 
-    .container { padding: 20px; max-width: 1200px; margin: auto; }
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    /* Profile Card */
-    .profiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-    .card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .card img { width: 100%; height: 220px; object-fit: cover; }
-    .card-body { padding: 15px; }
-    .card-body h3 { margin: 0 0 5px; }
-    .card-body p { margin: 4px 0; color: #555; }
+<style>
+body{margin:0;font-family:Arial;background:#f4f6fb}
+.hidden{display:none}
+header{background:#ff4d6d;color:#fff;text-align:center;padding:15px}
+.container{padding:15px}
 
-    .status { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; margin-top: 8px; }
-    .looking { background: #e0f7fa; color: #00796b; }
-    .proposal { background: #ffe0e6; color: #c2185b; }
-    .friendship { background: #ede7f6; color: #512da8; }
+/* Login */
+.login{max-width:400px;margin:40px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.1)}
+.login input,.login select{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ccc}
+.login button{width:100%;padding:12px;background:#ff4d6d;color:#fff;border:none;border-radius:8px;font-size:16px}
 
-    .actions { margin-top: 10px; display: flex; gap: 10px; }
-    .actions button { flex: 1; padding: 8px; border: none; border-radius: 6px; cursor: pointer; }
-    .like { background: #ff4d6d; color: #fff; }
-    .chat { background: #4caf50; color: #fff; }
+/* Cards */
+.card{background:#fff;border-radius:15px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:350px;margin:auto}
+.card img{width:100%;height:320px;object-fit:cover}
+.card-body{padding:12px}
+.status{font-size:12px;padding:4px 10px;border-radius:20px}
+.online{background:#d4f8d4;color:#1b5e20}
+.offline{background:#eee;color:#555}
+.actions{display:flex;gap:10px;margin-top:10px}
+.actions button{flex:1;padding:10px;border:none;border-radius:8px}
+.like{background:#ff4d6d;color:#fff}
+.chat{background:#4caf50;color:#fff}
 
-    /* Filter Section */
-    .filters { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .filters h2 { margin-top: 0; }
-    .filters select { padding: 8px; margin-right: 10px; border-radius: 6px; }
+/* Swipe */
+.swipe{position:relative}
 
-    footer { text-align: center; padding: 15px; color: #777; }
-  </style>
+/* Chat popup */
+.chat-box{position:fixed;bottom:0;right:10px;width:300px;background:#fff;border-radius:12px 12px 0 0;box-shadow:0 -2px 10px rgba(0,0,0,.2)}
+.chat-header{background:#ff4d6d;color:#fff;padding:10px;border-radius:12px 12px 0 0}
+.chat-messages{height:200px;overflow:auto;padding:10px;font-size:14px}
+.chat-input{display:flex}
+.chat-input input{flex:1;padding:8px;border:none;border-top:1px solid #ccc}
+.chat-input button{padding:8px 12px;border:none;background:#4caf50;color:#fff}
+</style>
 </head>
 <body>
 
 <header>
-  <h1>❤️ My Dating App</h1>
-  <p>Find Love • Friendship • Proposal</p>
+<h2>❤️ Dating App</h2>
 </header>
 
-<div class="container">
-
-  <!-- Filters -->
-  <div class="filters">
-    <h2>Filter Profiles</h2>
-    <select>
-      <option>Looking For</option>
-      <option>Relationship</option>
-      <option>Proposal</option>
-      <option>Friendship</option>
-    </select>
-
-    <select>
-      <option>Gender</option>
-      <option>Male</option>
-      <option>Female</option>
-    </select>
-
-    <select>
-      <option>Age</option>
-      <option>18-25</option>
-      <option>26-35</option>
-      <option>36+</option>
-    </select>
-  </div>
-
-  <!-- Profiles -->
-  <div class="profiles">
-
-    <div class="card">
-      <img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e" alt="profile">
-      <div class="card-body">
-        <h3>Anu, 24</h3>
-        <p>Location: Chennai</p>
-        <span class="status looking">Looking for Relationship</span>
-        <div class="actions">
-          <button class="like">❤️ Like</button>
-          <button class="chat">💬 Chat</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d" alt="profile">
-      <div class="card-body">
-        <h3>Raj, 28</h3>
-        <p>Location: Madurai</p>
-        <span class="status proposal">Ready for Proposal</span>
-        <div class="actions">
-          <button class="like">❤️ Like</button>
-          <button class="chat">💬 Chat</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" alt="profile">
-      <div class="card-body">
-        <h3>Priya, 26</h3>
-        <p>Location: Coimbatore</p>
-        <span class="status friendship">Looking for Friendship</span>
-        <div class="actions">
-          <button class="like">❤️ Like</button>
-          <button class="chat">💬 Chat</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
+<!-- Login -->
+<div class="login" id="loginBox">
+<h3>Login</h3>
+<input id="name" placeholder="Your name">
+<input id="age" type="number" placeholder="Age">
+<select id="gender">
+<option value="">Gender</option>
+<option>Male</option>
+<option>Female</option>
+</select>
+<button onclick="login()">Enter</button>
 </div>
 
-<footer>
-  © 2026 My Dating App | Demo HTML for GitHub Pages
-</footer>
+<!-- App -->
+<div class="container hidden" id="app">
+<div class="card swipe">
+<img id="profileImg" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330">
+<div class="card-body">
+<h3 id="profileName">Priya, 26</h3>
+<span id="onlineStatus" class="status online">Online</span>
+<div class="actions">
+<button class="like" onclick="nextProfile()">❤️ Like</button>
+<button class="chat" onclick="openChat()">💬 Chat</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Chat -->
+<div class="chat-box hidden" id="chatBox">
+<div class="chat-header">Chat</div>
+<div class="chat-messages" id="messages"></div>
+<div class="chat-input">
+<input id="msg" placeholder="Type...">
+<button onclick="sendMsg()">Send</button>
+</div>
+</div>
+
+<script>
+// Firebase config
+const firebaseConfig = {
+apiKey: "AIzaSyAlWP5D79PsX29H0hIZlfvL0YV5Us7v5I4",
+authDomain: "sample-firebase-ai-app-1f408.firebaseapp.com",
+databaseURL: "https://sample-firebase-ai-app-1f408-default-rtdb.asia-southeast1.firebasedatabase.app",
+projectId: "sample-firebase-ai-app-1f408",
+storageBucket: "sample-firebase-ai-app-1f408.firebasestorage.app",
+messagingSenderId: "657942233322",
+appId: "1:657942233322:web:a8dd9896ca8cfccdbb5793"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let userId = "";
+let profiles = [
+{name:"Priya",age:26,img:"https://images.unsplash.com/photo-1494790108377-be9c29b29330"},
+{name:"Anu",age:24,img:"https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e"},
+{name:"Kavya",age:28,img:"https://images.unsplash.com/photo-1544005313-94ddf0286df2"}
+];
+let index=0;
+
+function login(){
+let name=document.getElementById('name').value;
+let age=document.getElementById('age').value;
+let gender=document.getElementById('gender').value;
+if(!name||!age||!gender)return alert('Fill all');
+userId=Date.now();
+db.ref('users/'+userId).set({name,age,gender,online:true});
+document.getElementById('loginBox').classList.add('hidden');
+document.getElementById('app').classList.remove('hidden');
+}
+
+window.onbeforeunload=()=>{if(userId)db.ref('users/'+userId+'/online').set(false)}
+
+function nextProfile(){
+index=(index+1)%profiles.length;
+document.getElementById('profileImg').src=profiles[index].img;
+document.getElementById('profileName').innerText=`${profiles[index].name}, ${profiles[index].age}`;
+}
+
+function openChat(){
+document.getElementById('chatBox').classList.remove('hidden');
+}
+
+function sendMsg(){
+let m=document.getElementById('msg').value;
+if(!m)return;
+db.ref('chat').push({msg:m});
+document.getElementById('msg').value="";
+}
+
+db.ref('chat').on('child_added',s=>{
+let d=document.createElement('div');
+d.innerText=s.val().msg;
+document.getElementById('messages').appendChild(d);
+});
+</script>
 
 </body>
 </html>
