@@ -1,196 +1,154 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tamil VM Chat</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dating App Demo</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body { margin: 0; background: #f4f6fb; }
+    header { background: #ff4d6d; color: #fff; padding: 15px; text-align: center; }
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    .container { max-width: 420px; margin: auto; padding: 15px; }
 
-<style>
-body{margin:0;font-family:sans-serif;background:#111;color:#fff}
-.hidden{display:none}
-.center{display:flex;align-items:center;justify-content:center;height:100vh}
-.card{background:#1c1c1c;padding:20px;border-radius:12px;width:90%;max-width:350px}
-input,select,button{width:100%;padding:10px;margin-top:10px;border-radius:8px;border:none}
-button{background:#00c853;color:#000;font-weight:bold}
-.user{display:flex;align-items:center;padding:10px;border-bottom:1px solid #333;cursor:pointer}
-.user img{width:50px;height:50px;border-radius:50%;margin-right:10px}
-.dot{width:10px;height:10px;border-radius:50%;margin-left:auto}
-.online{background:#00e676}
-.offline{background:#555}
-.topbar{display:flex;justify-content:space-between;padding:10px;background:#000}
-.popup{position:fixed;top:0;left:0;width:100%;height:100%;background:#000c}
-.chat{height:60vh;overflow-y:auto;border:1px solid #333;padding:10px}
-.msg{margin:5px 0}
-.me{text-align:right;color:#00e676}
-</style>
+    /* Login */
+    .login-card {
+      background: #fff; padding: 20px; border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.1);
+    }
+    .login-card h2 { text-align: center; margin-bottom: 15px; }
+    .login-card input, .login-card select {
+      width: 100%; padding: 10px; margin-bottom: 10px;
+      border-radius: 8px; border: 1px solid #ccc;
+    }
+    .btn {
+      width: 100%; padding: 12px; border: none;
+      border-radius: 10px; background: #ff4d6d;
+      color: #fff; font-size: 16px; cursor: pointer;
+    }
+
+    /* Profiles */
+    .card {
+      background: #fff; border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.15);
+      overflow: hidden; margin-top: 20px;
+    }
+    .card img { width: 100%; height: 320px; object-fit: cover; }
+    .card-body { padding: 15px; }
+    .name { font-size: 20px; font-weight: bold; }
+    .info { color: #555; margin: 5px 0; }
+
+    .actions {
+      display: flex; justify-content: space-between; margin-top: 15px;
+    }
+    .actions button {
+      width: 48%; padding: 12px; border-radius: 30px; border: none;
+      font-size: 16px; cursor: pointer;
+    }
+    .like { background: #4caf50; color: #fff; }
+    .pass { background: #ccc; }
+
+    /* Proposal Modal */
+    .modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5);
+      justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: #fff; padding: 20px; border-radius: 15px;
+      width: 90%; max-width: 350px; text-align: center;
+    }
+    textarea { width: 100%; height: 80px; border-radius: 8px; padding: 8px; }
+
+    footer { text-align: center; padding: 10px; color: #777; }
+  </style>
 </head>
-
 <body>
 
-<!-- LOGIN -->
-<div id="login" class="center">
-  <div class="card">
-    <h3>Login</h3>
-    <input id="name" placeholder="Name">
-    <input id="age" type="number" placeholder="Age">
+<header>
+  <h1>❤️ Dating App</h1>
+</header>
+
+<div class="container" id="loginBox">
+  <div class="login-card">
+    <h2>Create Profile</h2>
+    <input id="name" placeholder="Your Name" />
+    <input id="age" type="number" placeholder="Age" />
     <select id="gender">
-      <option value="">Select Gender</option>
+      <option value="">Gender</option>
       <option>Male</option>
       <option>Female</option>
     </select>
-    <input type="file" id="img" accept="image/*">
-    <button onclick="login()">Continue</button>
+    <select id="looking">
+      <option value="">Looking For</option>
+      <option>Friendship</option>
+      <option>Dating</option>
+      <option>Serious Relationship</option>
+      <option>Marriage</option>
+    </select>
+    <button class="btn" onclick="login()">Continue</button>
   </div>
 </div>
 
-<!-- MAIN -->
-<div id="main" class="hidden">
-  <div class="topbar">
-    <div>Tamil VM Chat</div>
-    <button onclick="logout()">Logout</button>
-  </div>
-  <div id="users"></div>
-</div>
-
-<!-- CHAT -->
-<div id="chatPop" class="popup hidden">
+<div class="container" id="app" style="display:none;">
   <div class="card">
-    <h3 id="chatName"></h3>
-    <div class="chat" id="chatBox"></div>
-    <input id="msg" placeholder="Message">
-    <button onclick="sendMsg()">Send</button>
-    <button onclick="closeChat()">Close</button>
+    <img id="profileImg" src="https://picsum.photos/400/600?random=1" />
+    <div class="card-body">
+      <div class="name" id="pname">Anu, 23</div>
+      <div class="info">Looking for: Serious Relationship</div>
+      <div class="info">📍 Chennai</div>
+      <div class="actions">
+        <button class="pass" onclick="nextProfile()">❌ Pass</button>
+        <button class="like" onclick="openProposal()">❤️ Like</button>
+      </div>
+    </div>
   </div>
 </div>
+
+<!-- Proposal Modal -->
+<div class="modal" id="proposalModal">
+  <div class="modal-content">
+    <h3>Send Proposal 💌</h3>
+    <textarea placeholder="Write your proposal message..."></textarea>
+    <br><br>
+    <button class="btn" onclick="sendProposal()">Send</button>
+  </div>
+</div>
+
+<footer>
+  Demo Dating App – HTML Only
+</footer>
 
 <script>
-/* FIREBASE */
-firebase.initializeApp({
-  apiKey: "AIzaSyAlWP5D79PsX29H0hIZlfvL0YV5Us7v5I4",
-  authDomain: "sample-firebase-ai-app-1f408.firebaseapp.com",
-  databaseURL: "https://sample-firebase-ai-app-1f408-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "sample-firebase-ai-app-1f408",
-  storageBucket: "sample-firebase-ai-app-1f408.firebasestorage.app",
-  messagingSenderId: "657942233322",
-  appId: "1:657942233322:web:a8dd9896ca8cfccdbb5793"
-});
+  let index = 1;
+  const profiles = [
+    { name: 'Anu', age: 23, looking: 'Serious Relationship' },
+    { name: 'Kavya', age: 25, looking: 'Dating' },
+    { name: 'Priya', age: 22, looking: 'Friendship' }
+  ];
 
-const db = firebase.database();
-const storage = firebase.storage();
-
-let me = JSON.parse(localStorage.getItem("me"));
-let currentChat = null;
-
-/* AUTO LOGIN */
-if(me){
-  showMain();
-  setOnline(true);
-  loadUsers();
-}
-
-/* LOGIN FIXED */
-function login(){
-  const n = name.value.trim();
-  const a = age.value.trim();
-  const g = gender.value;
-  const file = img.files[0];
-
-  if(!n || !a || !g || !file){
-    alert("Please fill all details");
-    return;
+  function login() {
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
   }
 
-  const id = Date.now();
-  const ref = storage.ref("profiles/"+id);
+  function nextProfile() {
+    index = (index + 1) % profiles.length;
+    const p = profiles[index];
+    document.getElementById('pname').innerText = p.name + ', ' + p.age;
+    document.querySelector('.info').innerText = 'Looking for: ' + p.looking;
+    document.getElementById('profileImg').src = 'https://picsum.photos/400/600?random=' + Math.random();
+  }
 
-  ref.put(file).then(()=>{
-    ref.getDownloadURL().then(url=>{
-      me = {
-        id: id,
-        name: n,
-        age: a,
-        gender: g,
-        img: url,
-        online: true
-      };
-      db.ref("users/"+id).set(me);
-      localStorage.setItem("me",JSON.stringify(me));
-      showMain();
-      setOnline(true);
-      loadUsers();
-    });
-  }).catch(e=>{
-    alert("Image upload failed");
-  });
-}
+  function openProposal() {
+    document.getElementById('proposalModal').style.display = 'flex';
+  }
 
-/* UI */
-function showMain(){
-  document.getElementById("login").classList.add("hidden");
-  document.getElementById("main").classList.remove("hidden");
-}
-
-/* ONLINE */
-function setOnline(v){
-  if(!me) return;
-  db.ref("users/"+me.id+"/online").set(v);
-  window.onbeforeunload = ()=>db.ref("users/"+me.id+"/online").set(false);
-}
-
-/* USERS */
-function loadUsers(){
-  db.ref("users").on("value",snap=>{
-    users.innerHTML="";
-    snap.forEach(u=>{
-      if(u.key == me.id) return;
-      const d = u.val();
-      users.innerHTML += `
-      <div class="user" onclick="openChat(${u.key},'${d.name}')">
-        <img src="${d.img}">
-        ${d.name}, ${d.age}
-        <div class="dot ${d.online?'online':'offline'}"></div>
-      </div>`;
-    });
-  });
-}
-
-/* CHAT */
-function openChat(id,name){
-  currentChat = id;
-  chatName.innerText = name;
-  chatBox.innerHTML="";
-  chatPop.classList.remove("hidden");
-
-  db.ref("chats/"+me.id+"_"+id).off();
-  db.ref("chats/"+me.id+"_"+id).on("child_added",s=>{
-    const m=s.val();
-    chatBox.innerHTML += `<div class="msg ${m.from==me.id?'me':''}">${m.text}</div>`;
-  });
-}
-
-function sendMsg(){
-  if(!msg.value) return;
-  const data={from:me.id,text:msg.value,time:Date.now()};
-  db.ref("chats/"+me.id+"_"+currentChat).push(data);
-  db.ref("chats/"+currentChat+"_"+me.id).push(data);
-  msg.value="";
-}
-
-/* CLOSE */
-function closeChat(){
-  chatPop.classList.add("hidden");
-}
-
-/* LOGOUT */
-function logout(){
-  db.ref("users/"+me.id+"/online").set(false);
-  localStorage.clear();
-  location.reload();
-}
+  function sendProposal() {
+    alert('Proposal sent ❤️');
+    document.getElementById('proposalModal').style.display = 'none';
+    nextProfile();
+  }
 </script>
 
 </body>
