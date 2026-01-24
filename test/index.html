@@ -1,164 +1,166 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>WebRTC Audio / Video Call – Single HTML</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dating App Demo</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0f172a;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-h2 {
-  margin: 10px;
-}
-
-#videos {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-video {
-  width: 160px;
-  height: 220px;
-  background: #000;
-  border-radius: 10px;
-  object-fit: cover;
-}
-
-#controls {
-  margin-top: 15px;
-  display: flex;
-  gap: 10px;
-}
-
-button {
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.start { background: #22c55e; }
-.call  { background: #3b82f6; }
-.end   { background: #ef4444; }
-
-textarea {
-  width: 95%;
-  height: 90px;
-  margin-top: 10px;
-  border-radius: 8px;
-  padding: 8px;
-  border: none;
-  resize: none;
-}
+body{font-family:Arial;margin:0;background:#f4f4f4}
+.hidden{display:none}
+input,select,button{width:100%;padding:10px;margin:5px 0}
+button{background:#ff4081;color:white;border:none;border-radius:5px}
+.header{background:#ff4081;color:white;padding:10px;text-align:center}
+.user{display:flex;align-items:center;padding:10px;background:white;margin:5px;border-radius:8px}
+.user img{width:50px;height:50px;border-radius:50%;margin-right:10px}
+.online{color:green;font-size:12px}
+.chat{position:fixed;bottom:0;width:100%;background:white}
+#messages{height:200px;overflow:auto;padding:5px}
+video{width:100%;border-radius:10px}
+.toggle{display:flex;justify-content:space-between;align-items:center}
 </style>
 </head>
 
 <body>
 
-<h2>🎥 WebRTC Audio / Video Call</h2>
-
-<div id="videos">
-  <video id="localVideo" autoplay muted playsinline></video>
-  <video id="remoteVideo" autoplay playsinline></video>
+<div id="login">
+  <div class="header">Create Profile</div>
+  <input id="name" placeholder="Name">
+  <input id="age" type="number" placeholder="Age">
+  <select id="gender">
+    <option value="">Gender</option>
+    <option>Male</option>
+    <option>Female</option>
+  </select>
+  <input type="file" id="photo">
+  <button onclick="register()">Continue</button>
 </div>
 
-<div id="controls">
-  <button class="start" onclick="startMedia()">🎤 Start Camera</button>
-  <button class="call" onclick="createOffer()">📞 Call</button>
-  <button class="call" onclick="createAnswer()">📲 Answer</button>
-  <button class="end" onclick="endCall()">❌ End</button>
+<div id="app" class="hidden">
+  <div class="header">Dating App</div>
+
+  <div id="users"></div>
+
+  <div class="header">Settings</div>
+  <div class="toggle">
+    <span>Private Chat</span>
+    <input type="checkbox" id="chatToggle" checked>
+  </div>
+  <div class="toggle">
+    <span>Video Call</span>
+    <input type="checkbox" id="videoToggle" checked>
+  </div>
+  <input type="file" id="newPhoto">
+  <button onclick="changePhoto()">Change Photo</button>
 </div>
 
-<p>📋 Copy / Paste signaling data (for demo)</p>
+<div id="chatBox" class="chat hidden">
+  <div id="messages"></div>
+  <input id="msg" placeholder="Message">
+  <button onclick="sendMsg()">Send</button>
+  <button onclick="startCall()">Video Call</button>
+  <video id="localVideo" autoplay muted></video>
+  <video id="remoteVideo" autoplay></video>
+</div>
 
-<textarea id="offerBox" placeholder="Offer / Answer"></textarea>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <script>
-let localStream;
-let pc;
-
-const localVideo = document.getElementById("localVideo");
-const remoteVideo = document.getElementById("remoteVideo");
-const offerBox = document.getElementById("offerBox");
-
-const servers = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" }
-  ]
+const firebaseConfig = {
+ apiKey: "AIzaSyAlWP5D79PsX29H0hIZlfvL0YV5Us7v5I4",
+ authDomain: "sample-firebase-ai-app-1f408.firebaseapp.com",
+ databaseURL: "https://sample-firebase-ai-app-1f408-default-rtdb.asia-southeast1.firebasedatabase.app",
+ projectId: "sample-firebase-ai-app-1f408",
+ storageBucket: "sample-firebase-ai-app-1f408.firebasestorage.app",
+ messagingSenderId: "657942233322",
+ appId: "1:657942233322:web:a8dd9896ca8cfccdbb5793"
 };
+firebase.initializeApp(firebaseConfig);
 
-async function startMedia() {
-  localStream = await navigator.mediaDevices.getUserMedia({
-    video: true,
-    audio: true
+const db = firebase.database();
+const storage = firebase.storage();
+let me = localStorage.getItem("me");
+
+if(me){
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  loadUsers();
+}
+
+function register(){
+  const id = Date.now();
+  const file = photo.files[0];
+  storage.ref("profiles/"+id).put(file).then(s=>{
+    s.ref.getDownloadURL().then(url=>{
+      const user = {
+        id,name:name.value,age:age.value,gender:gender.value,
+        photo:url,online:true
+      };
+      db.ref("users/"+id).set(user);
+      localStorage.setItem("me",JSON.stringify(user));
+      location.reload();
+    });
   });
-  localVideo.srcObject = localStream;
-  alert("Camera & Mic started");
 }
 
-function createPeer() {
-  pc = new RTCPeerConnection(servers);
-
-  localStream.getTracks().forEach(track => {
-    pc.addTrack(track, localStream);
+function loadUsers(){
+  db.ref("users").on("value",snap=>{
+    users.innerHTML="";
+    snap.forEach(u=>{
+      if(!me || u.key!=JSON.parse(me).id){
+        users.innerHTML+=`
+        <div class="user" onclick="openChat('${u.key}')">
+          <img src="${u.val().photo}">
+          <div>
+            ${u.val().name}, ${u.val().age}<br>
+            <span class="online">Online</span>
+          </div>
+        </div>`;
+      }
+    });
   });
-
-  pc.ontrack = e => {
-    remoteVideo.srcObject = e.streams[0];
-  };
-
-  pc.onicecandidate = e => {
-    if (e.candidate) {
-      offerBox.value = JSON.stringify(pc.localDescription);
-    }
-  };
 }
 
-async function createOffer() {
-  createPeer();
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  offerBox.value = JSON.stringify(offer);
+let currentChat=null;
+function openChat(id){
+  if(!chatToggle.checked)return alert("Private chat OFF");
+  currentChat=id;
+  chatBox.classList.remove("hidden");
+  db.ref("chats/"+id).on("child_added",m=>{
+    messages.innerHTML+=`<div>${m.val()}</div>`;
+  });
 }
 
-async function createAnswer() {
-  createPeer();
-  const offer = JSON.parse(offerBox.value);
-  await pc.setRemoteDescription(offer);
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  offerBox.value = JSON.stringify(answer);
+function sendMsg(){
+  db.ref("chats/"+currentChat).push(msg.value);
+  msg.value="";
 }
 
-async function setRemote() {
-  const answer = JSON.parse(offerBox.value);
-  await pc.setRemoteDescription(answer);
+/* -------- VIDEO CALL (BASIC) -------- */
+let pc;
+async function startCall(){
+  if(!videoToggle.checked)return alert("Video call OFF");
+  const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+  localVideo.srcObject=stream;
+  pc = new RTCPeerConnection();
+  stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+  pc.ontrack=e=>remoteVideo.srcObject=e.streams[0];
 }
+/* ---------------------------------- */
 
-function endCall() {
-  pc?.close();
-  pc = null;
-  remoteVideo.srcObject = null;
-  alert("Call Ended");
+function changePhoto(){
+  const file=newPhoto.files[0];
+  const id=JSON.parse(localStorage.me).id;
+  storage.ref("profiles/"+id).put(file).then(s=>{
+    s.ref.getDownloadURL().then(url=>{
+      db.ref("users/"+id+"/photo").set(url);
+      alert("Updated");
+    });
+  });
 }
-
-offerBox.addEventListener("input", () => {
-  if (pc && pc.signalingState === "have-local-offer") {
-    setRemote();
-  }
-});
 </script>
-
 </body>
 </html>
