@@ -1,70 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Tamil VM – Live Dating Video</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      background:#0f0f0f;
-      color:#fff;
-      font-family: Arial, sans-serif;
-      text-align:center;
-      margin:0;
-      padding:15px;
-    }
-    h2 { color:#ff4d6d; }
-    input {
-      padding:10px;
-      width:220px;
-      border-radius:8px;
-      border:none;
-      font-size:16px;
-    }
-    button {
-      padding:10px 20px;
-      margin-top:10px;
-      font-size:16px;
-      border:none;
-      border-radius:8px;
-      background:#ff4d6d;
-      color:#fff;
-      cursor:pointer;
-    }
-    video {
-      width:100%;
-      max-width:420px;
-      margin-top:15px;
-      border-radius:12px;
-      background:#000;
-    }
-    .videos {
-      display:flex;
-      flex-wrap:wrap;
-      justify-content:center;
-      gap:10px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Tamil VM Live Dating</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  background:#0b0b0b;
+  color:#fff;
+  font-family:Arial,Helvetica,sans-serif;
+  text-align:center;
+}
+h2{color:#ff4d6d;margin:15px 0}
+button{
+  background:#ff4d6d;
+  color:#fff;
+  border:none;
+  padding:12px 24px;
+  font-size:16px;
+  border-radius:10px;
+  cursor:pointer;
+}
+video{
+  width:100%;
+  max-width:420px;
+  border-radius:14px;
+  background:#000;
+}
+.wrap{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:10px;
+  padding:10px;
+}
+</style>
 </head>
+
 <body>
 
-<h2>❤️ Tamil VM Live Video</h2>
+<h2>❤️ Tamil VM Live</h2>
+<button onclick="start()">Start Random Video</button>
 
-<input id="roomId" placeholder="Enter Room ID">
-<br>
-<button onclick="joinRoom()">Start / Join</button>
-
-<div class="videos">
-  <video id="localVideo" autoplay muted playsinline></video>
-  <video id="remoteVideo" autoplay playsinline></video>
+<div class="wrap">
+  <video id="local" autoplay muted playsinline></video>
+  <video id="remote" autoplay playsinline></video>
 </div>
 
-<!-- Firebase SDK -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-/* 🔥 YOUR FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
   authDomain: "tamil-chat-2d54e.firebaseapp.com",
@@ -78,60 +67,63 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let pc, localStream;
-
-const iceServers = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
+let pc, stream, roomId;
+const servers = {
+  iceServers:[
+    {urls:"stun:stun.l.google.com:19302"},
+    {urls:"stun:stun1.l.google.com:19302"}
   ]
 };
 
-async function joinRoom() {
-  const roomId = document.getElementById("roomId").value.trim();
-  if (!roomId) return alert("Enter Room ID");
+async function start(){
+  roomId = "room_" + Math.floor(Math.random()*100000);
+  const waiting = await db.ref("waiting").get();
 
-  pc = new RTCPeerConnection(iceServers);
+  if(waiting.exists()){
+    roomId = waiting.val();
+    db.ref("waiting").remove();
+  }else{
+    db.ref("waiting").set(roomId);
+  }
+  join(roomId);
+}
 
-  localStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-  document.getElementById("localVideo").srcObject = localStream;
+async function join(id){
+  pc = new RTCPeerConnection(servers);
 
-  pc.ontrack = e => {
-    document.getElementById("remoteVideo").srcObject = e.streams[0];
-  };
+  stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+  document.getElementById("local").srcObject = stream;
+  stream.getTracks().forEach(t=>pc.addTrack(t,stream));
 
-  pc.onicecandidate = e => {
-    if (e.candidate) {
-      db.ref("rooms/"+roomId+"/candidates").push(JSON.stringify(e.candidate));
+  pc.ontrack = e => document.getElementById("remote").srcObject = e.streams[0];
+
+  pc.onicecandidate = e=>{
+    if(e.candidate){
+      db.ref("rooms/"+id+"/ice").push(JSON.stringify(e.candidate));
     }
   };
 
-  const roomRef = db.ref("rooms/"+roomId);
-  const snapshot = await roomRef.get();
+  const ref = db.ref("rooms/"+id);
+  const snap = await ref.get();
 
-  if (!snapshot.exists()) {
-    // FIRST USER
+  if(!snap.exists()){
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    await roomRef.set({ offer: JSON.stringify(offer) });
+    ref.set({offer:JSON.stringify(offer)});
 
-    roomRef.child("answer").on("value", async s => {
-      if (s.exists()) {
-        await pc.setRemoteDescription(JSON.parse(s.val()));
+    ref.child("answer").on("value",s=>{
+      if(s.exists()){
+        pc.setRemoteDescription(JSON.parse(s.val()));
       }
     });
-  } else {
-    // SECOND USER
-    const offer = JSON.parse(snapshot.val().offer);
-    await pc.setRemoteDescription(offer);
-
+  }else{
+    await pc.setRemoteDescription(JSON.parse(snap.val().offer));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    await roomRef.update({ answer: JSON.stringify(answer) });
+    ref.update({answer:JSON.stringify(answer)});
   }
 
-  roomRef.child("candidates").on("child_added", s => {
+  ref.child("ice").on("child_added",s=>{
     pc.addIceCandidate(new RTCIceCandidate(JSON.parse(s.val())));
   });
 }
