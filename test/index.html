@@ -6,76 +6,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:linear-gradient(135deg,#ff4e8a,#ff8ccf);
-}
-.box{
-  max-width:360px;
-  margin:auto;
-  background:#fff;
-  min-height:100vh;
-  padding:12px;
-}
-input,select,button{
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  border-radius:8px;
-  border:1px solid #ccc;
-}
-button{
-  background:#ff4e8a;
-  color:#fff;
-  border:none;
-}
-.user{
-  display:flex;
-  align-items:center;
-  padding:8px;
-  border-bottom:1px solid #eee;
-  cursor:pointer;
-}
-.user img{
-  width:45px;
-  height:45px;
-  border-radius:50%;
-  margin-right:10px;
-}
+body{margin:0;font-family:Arial;background:#ff5a9e}
+.box{max-width:360px;margin:auto;background:#fff;min-height:100vh;padding:10px}
+input,select,button{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #ccc}
+button{background:#ff4e8a;color:#fff;border:none}
+.user{display:flex;align-items:center;padding:8px;border-bottom:1px solid #eee;cursor:pointer}
+.user img{width:45px;height:45px;border-radius:50%;margin-right:10px}
 .online{color:green;font-size:12px}
 .offline{color:red;font-size:12px}
-
-.chat{
-  position:fixed;
-  bottom:0;
-  right:0;
-  width:100%;
-  max-width:360px;
-  background:#fff;
-  display:none;
-  flex-direction:column;
-  height:60%;
-}
-.chat-header{
-  background:#ff4e8a;
-  color:#fff;
-  padding:10px;
-}
-.chat-body{
-  flex:1;
-  overflow:auto;
-  padding:10px;
-}
-.chat-input{
-  display:flex;
-}
+.chat{position:fixed;bottom:0;right:0;width:100%;max-width:360px;height:60%;background:#fff;display:none;flex-direction:column}
+.chat-header{background:#ff4e8a;color:#fff;padding:8px;display:flex;justify-content:space-between;align-items:center}
+.chat-body{flex:1;overflow:auto;padding:8px}
+.chat-input{display:flex}
 .chat-input input{flex:1}
+.small-btn{font-size:12px;padding:4px 6px;background:#fff;color:#ff4e8a;border-radius:6px}
 </style>
 </head>
 
 <body>
 
+<!-- LOGIN -->
 <div class="box" id="login">
   <h3>Login</h3>
   <input id="name" placeholder="Name">
@@ -88,13 +38,21 @@ button{
   <button onclick="register()">Continue</button>
 </div>
 
+<!-- USERS -->
 <div class="box" id="app" style="display:none">
   <h3>Users</h3>
   <div id="users"></div>
 </div>
 
+<!-- CHAT -->
 <div class="chat" id="chat">
-  <div class="chat-header" id="chatUser"></div>
+  <div class="chat-header">
+    <span id="chatUser"></span>
+    <div>
+      <button class="small-btn" onclick="blockUser()">🚫</button>
+      <button class="small-btn" onclick="reportUser()">⚠️</button>
+    </div>
+  </div>
   <div class="chat-body" id="chatBody"></div>
   <div class="chat-input">
     <input id="msg">
@@ -102,11 +60,14 @@ button{
   </div>
 </div>
 
-<!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, onValue, push, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { getDatabase, ref, set, onValue, push, update, onDisconnect } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { getMessaging, getToken, onMessage }
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDIzeINHRm-0jAfbsB0-7flr5sOasaEEy4",
@@ -121,14 +82,16 @@ const firebaseConfig = {
 const appFirebase = initializeApp(firebaseConfig);
 const db = getDatabase(appFirebase);
 const storage = getStorage(appFirebase);
+const messaging = getMessaging(appFirebase);
 
 let myId = localStorage.getItem("uid") || Date.now().toString();
 let chatWith = "";
 
-window.register = async () => {
+/* LOGIN */
+window.register = async ()=>{
   const file = photo.files[0];
-  const imgRef = sRef(storage, "profiles/"+myId);
-  await uploadBytes(imgRef, file);
+  const imgRef = sRef(storage,"profiles/"+myId);
+  await uploadBytes(imgRef,file);
   const img = await getDownloadURL(imgRef);
 
   set(ref(db,"users/"+myId),{
@@ -141,19 +104,24 @@ window.register = async () => {
 
   onDisconnect(ref(db,"users/"+myId+"/online")).set(false);
   localStorage.setItem("uid",myId);
+
+  initFCM();
   start();
 };
 
+/* START */
 function start(){
   login.style.display="none";
   app.style.display="block";
 
-  onValue(ref(db,"users"),snap=>{
-    users.innerHTML="";
-    snap.forEach(u=>{
-      if(u.key!==myId){
-        const d=u.val();
-        users.innerHTML+=`
+  onValue(ref(db,"users"), snap=>{
+    onValue(ref(db,"blocked/"+myId), b=>{
+      const blocked=b.val()||{};
+      users.innerHTML="";
+      snap.forEach(u=>{
+        if(u.key!==myId && !blocked[u.key]){
+          const d=u.val();
+          users.innerHTML+=`
           <div class="user" onclick="openChat('${u.key}','${d.name}')">
             <img src="${d.img}">
             <div>
@@ -163,16 +131,18 @@ function start(){
               </span>
             </div>
           </div>`;
-      }
+        }
+      });
     });
   });
 }
 
+/* CHAT */
 window.openChat=(id,name)=>{
   chatWith=id;
   chat.style.display="flex";
   chatUser.innerText=name;
-  onValue(ref(db,"chats/"+chatId()),snap=>{
+  onValue(ref(db,"chats/"+chatId()), snap=>{
     chatBody.innerHTML="";
     snap.forEach(m=>{
       chatBody.innerHTML+=`<div>${m.val().from==myId?"You":name}: ${m.val().text}</div>`;
@@ -185,7 +155,8 @@ window.sendMsg=()=>{
   if(!msg.value) return;
   push(ref(db,"chats/"+chatId()),{
     from:myId,
-    text:msg.value
+    text:msg.value,
+    time:Date.now()
   });
   msg.value="";
 };
@@ -193,6 +164,43 @@ window.sendMsg=()=>{
 function chatId(){
   return [myId,chatWith].sort().join("_");
 }
+
+/* BLOCK */
+window.blockUser=()=>{
+  update(ref(db,"blocked/"+myId),{[chatWith]:true});
+  alert("User blocked");
+  chat.style.display="none";
+};
+
+/* REPORT */
+window.reportUser=()=>{
+  const reason=prompt("Reason?");
+  if(!reason) return;
+  push(ref(db,"reports"),{
+    from:myId,
+    reported:chatWith,
+    reason:reason,
+    time:Date.now()
+  });
+  alert("Reported");
+};
+
+/* FCM */
+function initFCM(){
+  Notification.requestPermission().then(p=>{
+    if(p==="granted"){
+      getToken(messaging,{
+        vapidKey:"YOUR_PUBLIC_VAPID_KEY"
+      }).then(token=>{
+        set(ref(db,"users/"+myId+"/fcm"),token);
+      });
+    }
+  });
+}
+
+onMessage(messaging,payload=>{
+  alert(payload.notification.title+"\n"+payload.notification.body);
+});
 
 if(localStorage.getItem("uid")) start();
 </script>
