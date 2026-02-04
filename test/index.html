@@ -3,159 +3,170 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Firebase Dating App – STABLE FINAL</title>
-
-<!-- Firebase SDKs (COMPAT = WebView safe) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-
+<title>Dating App</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-body{margin:0;font-family:Arial;background:#0f0f0f;color:#fff}
-.hidden{display:none}
-header{background:#1b1b1b;padding:10px;display:flex;justify-content:space-between}
-.card{max-width:420px;margin:20px auto;background:#1c1c1c;padding:15px;border-radius:14px}
-input,select,button{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:none}
-button{background:#ff2f6d;color:#fff;font-weight:bold}
-.profile{display:flex;align-items:center;background:#222;padding:10px;border-radius:12px;margin:8px 0;cursor:pointer}
-.profile img{width:60px;height:60px;border-radius:50%;margin-right:10px}
-.online{width:10px;height:10px;background:lime;border-radius:50%;margin-left:auto}
-#profiles{max-width:420px;margin:auto}
-#chat{position:fixed;bottom:0;left:0;right:0;background:#111;padding:10px}
-#messages{height:200px;overflow:auto;background:#000;padding:6px}
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+  body { background: #f8f8f8; display: flex; justify-content: center; align-items: center; height: 100vh; }
+  .app-container { width: 360px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
+  .header { padding: 15px; background: #ff4757; color: #fff; text-align: center; font-weight: 700; font-size: 20px; }
+  .form { display: flex; flex-direction: column; padding: 20px; }
+  .form input, .form select { margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+  .form button { padding: 10px; background: #ff4757; color: #fff; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
+  .profiles { display: none; flex-direction: column; padding: 15px; }
+  .card { position: relative; background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 15px; overflow: hidden; }
+  .card img { width: 100%; height: 250px; object-fit: cover; }
+  .card-info { padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .card-info h3 { font-size: 18px; }
+  .online { width: 12px; height: 12px; background: green; border-radius: 50%; display: inline-block; }
+  .chat-popup { display: none; position: fixed; bottom: 20px; right: 20px; width: 300px; background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  .chat-header { padding: 10px; background: #ff4757; color: #fff; border-top-left-radius: 10px; border-top-right-radius: 10px; font-weight: 700; }
+  .chat-messages { height: 200px; overflow-y: auto; padding: 10px; border-bottom: 1px solid #ddd; }
+  .chat-input { display: flex; padding: 10px; }
+  .chat-input input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+  .chat-input button { padding: 8px 10px; margin-left: 5px; background: #ff4757; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
 </style>
 </head>
 <body>
 
-<header id="top" class="hidden">
-  <span onclick="logout()">🚪 Logout</span>
-</header>
+<div class="app-container">
+  <div class="header">Dating App</div>
+  
+  <!-- Registration/Login Form -->
+  <div class="form" id="loginForm">
+    <input type="text" id="name" placeholder="Your Name" required>
+    <input type="number" id="age" placeholder="Age" required>
+    <select id="gender" required>
+      <option value="">Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+    <input type="file" id="profileImage" accept="image/*" required>
+    <button onclick="registerUser()">Start</button>
+  </div>
 
-<!-- LOGIN -->
-<div class="card" id="login">
-  <h2>Login</h2>
-  <input id="name" placeholder="Name">
-  <input id="age" type="number" placeholder="Age">
-  <select id="gender"><option>Male</option><option>Female</option></select>
-  <input type="file" id="photo" accept="image/*">
-  <button onclick="loginUser()">Continue</button>
+  <!-- Profiles Display -->
+  <div class="profiles" id="profilesContainer"></div>
 </div>
 
-<!-- PROFILES -->
-<div id="profiles" class="hidden"></div>
-
-<!-- CHAT -->
-<div id="chat" class="hidden">
-  <h3 id="chatName"></h3>
-  <div id="messages"></div>
-  <input id="msg" placeholder="Message">
-  <button onclick="sendMsg()">Send</button>
+<!-- Chat Popup -->
+<div class="chat-popup" id="chatPopup">
+  <div class="chat-header" id="chatHeader">Chat</div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input">
+    <input type="text" id="chatInput" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send</button>
+  </div>
 </div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
 
 <script>
-// Firebase init (NO ASYNC BUGS)
-firebase.initializeApp({
-  apiKey: "AIzaSyAlWP5D79PsX29H0hIZlfvL0YV5Us7v5I4",
-  authDomain: "sample-firebase-ai-app-1f408.firebaseapp.com",
-  databaseURL: "https://sample-firebase-ai-app-1f408-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "sample-firebase-ai-app-1f408",
-  storageBucket: "sample-firebase-ai-app-1f408.firebasestorage.app",
-  messagingSenderId: "657942233322",
-  appId: "1:657942233322:web:a8dd9896ca8cfccdbb5793"
-});
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAlWP5D79PsX29H0hIZlfvL0YV5Us7v5I4",
+    authDomain: "sample-firebase-ai-app-1f408.firebaseapp.com",
+    databaseURL: "https://sample-firebase-ai-app-1f408-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "sample-firebase-ai-app-1f408",
+    storageBucket: "sample-firebase-ai-app-1f408.firebasestorage.app",
+    messagingSenderId: "657942233322",
+    appId: "1:657942233322:web:a8dd9896ca8cfccdbb5793"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const storage = firebase.storage();
 
-const auth = firebase.auth();
-const db = firebase.database();
-const st = firebase.storage();
-let me = null;
-let peerId = null;
+  let currentUser = null;
 
-// VERY IMPORTANT: only UI logic inside here
-auth.onAuthStateChanged(user => {
-  if(user){
-    me = user;
+  // Register User
+  async function registerUser() {
+    const name = document.getElementById('name').value;
+    const age = document.getElementById('age').value;
+    const gender = document.getElementById('gender').value;
+    const file = document.getElementById('profileImage').files[0];
+
+    if(!name || !age || !gender || !file) { alert('All fields are required!'); return; }
+
+    // Upload Image
+    const storageRef = storage.ref('profiles/' + file.name);
+    await storageRef.put(file);
+    const imageUrl = await storageRef.getDownloadURL();
+
+    // Save User in Firebase
+    const userId = Date.now();
+    const userData = { id: userId, name, age, gender, imageUrl, online: true };
+    db.ref('users/' + userId).set(userData);
+
+    currentUser = userData;
+
+    document.getElementById('loginForm').style.display = 'none';
     loadProfiles();
   }
-});
 
-function loginUser(){
-  if(!photo.files[0]){alert('Select image');return;}
-
-  auth.signInAnonymously().then(res => {
-    me = res.user;
-    const ref = st.ref('profiles/' + me.uid);
-
-    ref.put(photo.files[0])
-      .then(() => ref.getDownloadURL())
-      .then(url => {
-        return db.ref('users/' + me.uid).set({
-          name: name.value,
-          age: age.value,
-          gender: gender.value,
-          img: url
-        });
-      })
-      .then(() => loadProfiles());
-  });
-}
-
-function loadProfiles(){
-  login.classList.add('hidden');
-  top.classList.remove('hidden');
-  profiles.classList.remove('hidden');
-
-  db.ref('users').off();
-  db.ref('users').on('value', snap => {
-    profiles.innerHTML = '';
-
-    snap.forEach(c => {
-      if(c.key !== me.uid){
-        const u = c.val();
-        if(!u) return;
-        const d = document.createElement('div');
-        d.className = 'profile';
-        d.innerHTML = `<img src="${u.img}"><div>${u.name}, ${u.age} (${u.gender})</div><div class="online"></div>`;
-        d.onclick = () => openChat(c.key, u.name);
-        profiles.appendChild(d);
-      }
+  // Load Profiles
+  function loadProfiles() {
+    const container = document.getElementById('profilesContainer');
+    container.style.display = 'flex';
+    db.ref('users').once('value', snapshot => {
+      container.innerHTML = '';
+      snapshot.forEach(child => {
+        const user = child.val();
+        if(user.id !== currentUser.id){
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <img src="${user.imageUrl}" alt="${user.name}">
+            <div class="card-info">
+              <h3>${user.name}, ${user.age}</h3>
+              <span class="online"></span>
+            </div>
+          `;
+          card.onclick = () => openChat(user);
+          container.appendChild(card);
+        }
+      });
     });
+  }
 
-    if(!profiles.innerHTML){
-      profiles.innerHTML = '<p style="text-align:center">No users online</p>';
-    }
-  });
-}
+  // Chat Functions
+  let chatUser = null;
+  function openChat(user){
+    chatUser = user;
+    document.getElementById('chatPopup').style.display = 'block';
+    document.getElementById('chatHeader').innerText = 'Chat with ' + user.name;
+    loadMessages();
+  }
 
-function openChat(id, name){
-  peerId = id;
-  chatName.innerText = name;
-  chat.classList.remove('hidden');
-  loadChat();
-}
+  function loadMessages() {
+    const chatMessages = document.getElementById('chatMessages');
+    db.ref('messages').orderByChild('chatId').equalTo(getChatId()).on('value', snapshot => {
+      chatMessages.innerHTML = '';
+      snapshot.forEach(child => {
+        const msg = child.val();
+        const div = document.createElement('div');
+        div.style.marginBottom = '8px';
+        div.innerHTML = `<strong>${msg.sender === currentUser.id ? 'You' : chatUser.name}:</strong> ${msg.text}`;
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      });
+    });
+  }
 
-function loadChat(){
-  messages.innerHTML = '';
-  db.ref('chat/' + me.uid + '/' + peerId).off();
-  db.ref('chat/' + me.uid + '/' + peerId).on('child_added', s => {
-    const d = document.createElement('div');
-    d.innerText = s.val().t;
-    messages.appendChild(d);
-  });
-}
+  function sendMessage() {
+    const input = document.getElementById('chatInput');
+    if(!input.value) return;
+    const msg = { chatId: getChatId(), sender: currentUser.id, text: input.value };
+    db.ref('messages').push(msg);
+    input.value = '';
+  }
 
-function sendMsg(){
-  if(!msg.value) return;
-  const t = msg.value;
-  db.ref('chat/' + me.uid + '/' + peerId).push({t});
-  db.ref('chat/' + peerId + '/' + me.uid).push({t});
-  msg.value = '';
-}
-
-function logout(){
-  auth.signOut();
-  location.reload();
-}
+  function getChatId() {
+    return currentUser.id < chatUser.id ? currentUser.id + '_' + chatUser.id : chatUser.id + '_' + currentUser.id;
+  }
 </script>
 </body>
 </html>
