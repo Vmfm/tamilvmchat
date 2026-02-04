@@ -1,30 +1,201 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Simple Dating App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Firebase Dating App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(135deg,#ff4e8a,#ff8ccf);
+}
+.box{
+  max-width:360px;
+  margin:auto;
+  background:#fff;
+  min-height:100vh;
+  padding:12px;
+}
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+button{
+  background:#ff4e8a;
+  color:#fff;
+  border:none;
+}
+.user{
+  display:flex;
+  align-items:center;
+  padding:8px;
+  border-bottom:1px solid #eee;
+  cursor:pointer;
+}
+.user img{
+  width:45px;
+  height:45px;
+  border-radius:50%;
+  margin-right:10px;
+}
+.online{color:green;font-size:12px}
+.offline{color:red;font-size:12px}
+
+.chat{
+  position:fixed;
+  bottom:0;
+  right:0;
+  width:100%;
+  max-width:360px;
+  background:#fff;
+  display:none;
+  flex-direction:column;
+  height:60%;
+}
+.chat-header{
+  background:#ff4e8a;
+  color:#fff;
+  padding:10px;
+}
+.chat-body{
+  flex:1;
+  overflow:auto;
+  padding:10px;
+}
+.chat-input{
+  display:flex;
+}
+.chat-input input{flex:1}
+</style>
 </head>
+
 <body>
 
-  <div class="app">
-    <h1>💖 Dating App</h1>
+<div class="box" id="login">
+  <h3>Login</h3>
+  <input id="name" placeholder="Name">
+  <input id="age" type="number" placeholder="Age">
+  <select id="gender">
+    <option>Male</option>
+    <option>Female</option>
+  </select>
+  <input type="file" id="photo">
+  <button onclick="register()">Continue</button>
+</div>
 
-    <div class="card" id="profileCard">
-      <img id="profileImg" src="" alt="Profile">
-      <h2 id="name"></h2>
-      <p id="ageGender"></p>
-    </div>
+<div class="box" id="app" style="display:none">
+  <h3>Users</h3>
+  <div id="users"></div>
+</div>
 
-    <div class="buttons">
-      <button class="dislike" onclick="dislike()">❌</button>
-      <button class="like" onclick="like()">❤️</button>
-    </div>
-
-    <p id="status"></p>
+<div class="chat" id="chat">
+  <div class="chat-header" id="chatUser"></div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chat-input">
+    <input id="msg">
+    <button onclick="sendMsg()">Send</button>
   </div>
+</div>
 
-  <script src="app.js"></script>
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, onValue, push, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDIzeINHRm-0jAfbsB0-7flr5sOasaEEy4",
+  authDomain: "vmdatting.firebaseapp.com",
+  databaseURL: "https://vmdatting-default-rtdb.firebaseio.com",
+  projectId: "vmdatting",
+  storageBucket: "vmdatting.firebasestorage.app",
+  messagingSenderId: "876437607489",
+  appId: "1:876437607489:web:46ad641659f621618562c0"
+};
+
+const appFirebase = initializeApp(firebaseConfig);
+const db = getDatabase(appFirebase);
+const storage = getStorage(appFirebase);
+
+let myId = localStorage.getItem("uid") || Date.now().toString();
+let chatWith = "";
+
+window.register = async () => {
+  const file = photo.files[0];
+  const imgRef = sRef(storage, "profiles/"+myId);
+  await uploadBytes(imgRef, file);
+  const img = await getDownloadURL(imgRef);
+
+  set(ref(db,"users/"+myId),{
+    name:name.value,
+    age:age.value,
+    gender:gender.value,
+    img:img,
+    online:true
+  });
+
+  onDisconnect(ref(db,"users/"+myId+"/online")).set(false);
+  localStorage.setItem("uid",myId);
+  start();
+};
+
+function start(){
+  login.style.display="none";
+  app.style.display="block";
+
+  onValue(ref(db,"users"),snap=>{
+    users.innerHTML="";
+    snap.forEach(u=>{
+      if(u.key!==myId){
+        const d=u.val();
+        users.innerHTML+=`
+          <div class="user" onclick="openChat('${u.key}','${d.name}')">
+            <img src="${d.img}">
+            <div>
+              <b>${d.name}</b><br>
+              <span class="${d.online?'online':'offline'}">
+                ${d.online?'🟢 Online':'🔴 Offline'}
+              </span>
+            </div>
+          </div>`;
+      }
+    });
+  });
+}
+
+window.openChat=(id,name)=>{
+  chatWith=id;
+  chat.style.display="flex";
+  chatUser.innerText=name;
+  onValue(ref(db,"chats/"+chatId()),snap=>{
+    chatBody.innerHTML="";
+    snap.forEach(m=>{
+      chatBody.innerHTML+=`<div>${m.val().from==myId?"You":name}: ${m.val().text}</div>`;
+    });
+    chatBody.scrollTop=9999;
+  });
+};
+
+window.sendMsg=()=>{
+  if(!msg.value) return;
+  push(ref(db,"chats/"+chatId()),{
+    from:myId,
+    text:msg.value
+  });
+  msg.value="";
+};
+
+function chatId(){
+  return [myId,chatWith].sort().join("_");
+}
+
+if(localStorage.getItem("uid")) start();
+</script>
+
 </body>
 </html>
