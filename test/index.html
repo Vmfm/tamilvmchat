@@ -1,69 +1,212 @@
 <!DOCTYPE html>
-<html lang="ta">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Tamil Voice to Text</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      text-align: center;
-      padding: 40px;
-    }
-    textarea {
-      width: 90%;
-      height: 150px;
-      font-size: 18px;
-      padding: 10px;
-    }
-    button {
-      padding: 12px 25px;
-      font-size: 18px;
-      margin-top: 15px;
-      cursor: pointer;
-    }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>WhatsApp Full Chat</title>
+
+<style>
+:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;height:100vh}
+#app{max-width:1100px;margin:auto;height:100vh;display:flex;flex-direction:column}
+
+/* top bar */
+#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center}
+#title{font-weight:700}
+#onlineCount{margin-left:auto;color:var(--muted);font-size:13px}
+#settingsWrap{margin-left:12px;position:relative}
+#settingsBtn{background:none;border:1px solid #333;color:#fff;border-radius:6px;padding:6px;cursor:pointer}
+
+/* settings panel */
+#settingsPanel{position:absolute;right:0;top:42px;background:#0b141a;border-radius:10px;padding:10px;width:220px;display:none;z-index:100}
+.settingRow{display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:14px}
+.toggleBtn{width:42px;height:22px;background:#2a3942;border-radius:20px;position:relative;cursor:pointer}
+.toggleKnob{width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:.2s}
+
+/* chat */
+#messages{flex:1;overflow:auto;padding:12px;background:#071215}
+.msg-row{display:flex;gap:8px;margin-bottom:10px;max-width:80%}
+.msg-row.self{margin-left:auto;flex-direction:row-reverse}
+.avatar{width:36px;height:36px;border-radius:50%;background:#555;color:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.avatar.online{border:2px solid var(--accent)}
+.bubble{background:var(--panel);padding:8px 12px;border-radius:10px}
+.msg-row.self .bubble{background:#005c4b}
+.time{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* input */
+#inputBar{display:flex;padding:10px;background:var(--panel);gap:8px}
+#messageInput{flex:1;border:0;border-radius:20px;padding:10px;background:#2a3942;color:#fff}
+#sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px}
+
+/* login */
+#loginWrap{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200}
+#loginCard{background:#0b141a;padding:20px;border-radius:12px;width:300px}
+#loginCard input{width:100%;padding:10px;border-radius:8px;border:0;margin-top:10px;background:#162027;color:#fff}
+#loginCard button{margin-top:12px;width:100%;padding:10px;border-radius:8px;border:0;background:var(--accent);color:#000;font-weight:700}
+
+/* toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transition:.3s}
+#toast.show{opacity:1}
+</style>
 </head>
+
 <body>
 
-  <h2>🎙️ Tamil Voice to Text</h2>
+<div id="loginWrap">
+  <div id="loginCard">
+    <div style="font-weight:700">Enter your name</div>
+    <input id="nameInput" placeholder="Your name">
+    <button id="joinBtn">Join</button>
+  </div>
+</div>
 
-  <textarea id="output" placeholder="இங்கே தமிழ் எழுத்து வரும்..."></textarea><br>
+<div id="app">
+  <div id="topBar">
+    <div id="title">Group Chat</div>
+    <div id="onlineCount"></div>
 
-  <button onclick="startListening()">🎤 Speak</button>
-  <button onclick="stopListening()">⏹ Stop</button>
+    <div id="settingsWrap">
+      <button id="settingsBtn">⚙️</button>
+      <div id="settingsPanel">
+        <div class="settingRow">
+          <span>Audio Call</span>
+          <div class="toggleBtn" id="toggleCall"><div class="toggleKnob" id="toggleCallKnob"></div></div>
+        </div>
+        <div class="settingRow">
+          <span>Private Chat</span>
+          <div class="toggleBtn" id="togglePrivate"><div class="toggleKnob" id="togglePrivateKnob"></div></div>
+        </div>
+        <div class="settingRow">
+          <button id="logoutBtn" style="width:100%;padding:10px;border:0;border-radius:8px;background:#ff3b30;color:#fff;font-weight:700;cursor:pointer">
+            🚪 Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <script>
-    let recognition;
+  <div id="messages"></div>
 
-    function startListening() {
-      if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech Recognition not supported in this browser");
-        return;
-      }
+  <div id="inputBar">
+    <input id="messageInput" placeholder="Type a message">
+    <button id="sendBtn">➤</button>
+  </div>
+</div>
 
-      recognition = new webkitSpeechRecognition();
-      recognition.lang = "ta-IN"; // Tamil language
-      recognition.continuous = true;
-      recognition.interimResults = true;
+<div id="toast"></div>
 
-      recognition.onresult = function(event) {
-        let text = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          text += event.results[i][0].transcript;
-        }
-        document.getElementById("output").value = text;
-      };
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-      recognition.start();
-    }
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+  authDomain: "tamil-chat-2d54e.firebaseapp.com",
+  databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+  projectId: "tamil-chat-2d54e",
+  storageBucket: "tamil-chat-2d54e.appspot.com",
+  messagingSenderId: "804705969240",
+  appId: "1:804705969240:web:658df281dd8360843c162d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    function stopListening() {
-      if (recognition) {
-        recognition.stop();
-      }
-    }
-  </script>
+/* DOM */
+const loginWrap = document.getElementById('loginWrap');
+const joinBtn = document.getElementById('joinBtn');
+const nameInput = document.getElementById('nameInput');
+const messagesEl = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+const onlineCount = document.getElementById('onlineCount');
+const toast = document.getElementById('toast');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const logoutBtn = document.getElementById('logoutBtn');
+const toggleCall = document.getElementById('toggleCall');
+const toggleCallKnob = document.getElementById('toggleCallKnob');
+const togglePrivate = document.getElementById('togglePrivate');
+const togglePrivateKnob = document.getElementById('togglePrivateKnob');
+
+/* state */
+let username = localStorage.getItem('guestName') || '';
+let settings = JSON.parse(localStorage.getItem('chat_settings')||'{}');
+if(settings.audio===undefined) settings.audio=true;
+if(settings.private===undefined) settings.private=true;
+
+/* helpers */
+function showToast(t){toast.textContent=t;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1500);}
+function applyToggles(){
+  toggleCall.style.background=settings.audio?'#25d366':'#2a3942';
+  toggleCallKnob.style.left=settings.audio?'22px':'2px';
+  togglePrivate.style.background=settings.private?'#25d366':'#2a3942';
+  togglePrivateKnob.style.left=settings.private?'22px':'2px';
+  localStorage.setItem('chat_settings',JSON.stringify(settings));
+}
+
+/* login */
+if(username){ loginWrap.style.display='none'; start(); }
+joinBtn.onclick=()=>{
+  if(!nameInput.value.trim())return;
+  username=nameInput.value.trim();
+  localStorage.setItem('guestName',username);
+  loginWrap.style.display='none';
+  start();
+};
+
+function start(){
+  applyToggles();
+  db.ref('status/'+username).set(true);
+  db.ref('status/'+username).onDisconnect().remove();
+
+  db.ref('messages').limitToLast(50).on('child_added',s=>{
+    const d=s.val();
+    const row=document.createElement('div');
+    row.className='msg-row'+(d.name===username?' self':'');
+    const av=document.createElement('div');
+    av.className='avatar';
+    av.textContent=d.name[0].toUpperCase();
+    const b=document.createElement('div');
+    b.className='bubble';
+    b.textContent=d.text;
+    const t=document.createElement('div');
+    t.className='time';
+    t.textContent=new Date(d.time).toLocaleTimeString();
+    b.appendChild(t);
+    row.append(av,b);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop=messagesEl.scrollHeight;
+  });
+
+  db.ref('status').on('value',s=>{
+    onlineCount.textContent=Object.keys(s.val()||{}).length+' online';
+  });
+}
+
+/* send */
+sendBtn.onclick=send;
+messageInput.onkeypress=e=>{if(e.key==='Enter')send();}
+function send(){
+  if(!messageInput.value.trim())return;
+  db.ref('messages').push({name:username,text:messageInput.value,time:Date.now()});
+  messageInput.value='';
+}
+
+/* settings */
+settingsBtn.onclick=()=>settingsPanel.style.display=settingsPanel.style.display==='block'?'none':'block';
+toggleCall.onclick=()=>{settings.audio=!settings.audio;applyToggles();}
+togglePrivate.onclick=()=>{settings.private=!settings.private;applyToggles();}
+
+/* logout */
+logoutBtn.onclick=()=>{
+  db.ref('status/'+username).remove();
+  localStorage.clear();
+  showToast('Logged out');
+  setTimeout(()=>location.reload(),400);
+};
+</script>
 
 </body>
 </html>
