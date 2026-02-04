@@ -5,6 +5,7 @@
 <title>VM Dating App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <style>
@@ -80,13 +81,20 @@ appId: "1:876437607489:web:46ad641659f621618562c0",
 measurementId: "G-XH9LHSPWYM"
 };
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.database();
 const storage = firebase.storage();
 
-let currentUserId = localStorage.getItem('vmUserId') || null;
+let currentUserId = null;
 let chatWithId = null;
 let callPeerId = null;
 let localStream=null, peerConnection=null;
+
+// Anonymous login on page load
+auth.signInAnonymously().then(() => {
+currentUserId = auth.currentUser.uid;
+console.log("Anonymous UID:", currentUserId);
+}).catch(e=>console.error(e));
 
 // Sign Up
 async function signUp(){
@@ -97,8 +105,6 @@ const file=document.getElementById('signupImage').files[0];
 if(!name||!age||!gender||!file){alert("Fill all fields");return;}
 if(age<18){alert("Must be 18+");return;}
 try{
-currentUserId='user_'+Date.now(); // random id
-localStorage.setItem('vmUserId', currentUserId);
 const imageRef=storage.ref('profiles/'+currentUserId+'/'+file.name);
 await imageRef.put(file);
 const imageUrl=await imageRef.getDownloadURL();
@@ -185,12 +191,14 @@ document.getElementById('videoPopup').style.display='none';
 callPeerId=null;
 }
 
-// Auto-load if user exists
-if(currentUserId){
-document.getElementById('signup').style.display='none';
-db.ref('users/'+currentUserId).update({online:true});
+// Auto-load if already signed in
+auth.onAuthStateChanged(user=>{
+if(user){
+currentUserId=user.uid;
+db.ref('users/'+currentUserId).onDisconnect().update({online:false});
 loadProfiles();
 }
+});
 </script>
 </body>
 </html>
