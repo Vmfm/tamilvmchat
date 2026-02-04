@@ -2,203 +2,182 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>VM Dating App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<title>Dating App</title>
 <style>
-body { font-family: Arial,sans-serif; margin:0; padding:0; background:#f5f5f5; }
-header { background:#ff4081; color:#fff; padding:10px 20px; text-align:center; font-size:1.5em; }
-#signup,#profiles { max-width:400px; margin:20px auto; padding:20px; background:#fff; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
-input,select,button { width:100%; padding:10px; margin:8px 0; border-radius:5px; border:1px solid #ccc; }
-button { background:#ff4081; color:#fff; border:none; cursor:pointer; }
-button:hover { background:#e73370; }
-.profile-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.profile-card { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; border:1px solid #ddd; }
-.profile-card img { width:100%; height:120px; object-fit:cover; }
-.online-dot { position:absolute; top:5px; right:5px; width:15px; height:15px; border-radius:50%; background:green; border:2px solid #fff; }
-#chatPopup,#videoPopup { display:none; position:fixed; bottom:10px; right:10px; width:300px; max-height:400px; background:#fff; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.2); flex-direction:column; }
-#chatMessages { flex:1; padding:10px; overflow-y:auto; }
-#chatInput { display:flex; }
-#chatInput input { flex:1; border-radius:0; border-right:none; }
-#chatInput button { border-radius:0; }
-#videoPopup video { width:100%; border-radius:10px; background:#000; }
-#videoButtons { display:flex; justify-content:space-around; margin:5px 0; }
+  body { font-family: Arial, sans-serif; background:#f2f2f2; margin:0; padding:0;}
+  .container { max-width:800px; margin:20px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1);}
+  input, select { display:block; width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #ccc;}
+  button { padding:10px 20px; margin:5px; border:none; border-radius:5px; cursor:pointer;}
+  .user-card { display:flex; align-items:center; justify-content:space-between; border:1px solid #ddd; padding:10px; border-radius:8px; margin-bottom:10px; background:#fafafa;}
+  .user-info { display:flex; align-items:center;}
+  .user-info img { width:50px; height:50px; border-radius:50%; margin-right:10px; object-fit:cover;}
+  .status { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:5px;}
+  .online { background:green; }
+  .offline { background:red; }
+  .video-call { background: #2196F3; color:white;}
+  .block-btn { background:#f44336; color:white;}
+  .unblock-btn { background:#4CAF50; color:white;}
+  .report-btn { background:#ff9800; color:white;}
+  #videoContainer { display:none; margin-top:20px; }
+  video { width:100%; max-width:400px; border:1px solid #ccc; border-radius:10px; }
 </style>
 </head>
 <body>
+<div class="container">
+  <div id="loginDiv">
+    <h2>Login</h2>
+    <input type="text" id="name" placeholder="Name">
+    <input type="number" id="age" placeholder="Age">
+    <select id="gender">
+      <option value="">Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Other">Other</option>
+    </select>
+    <input type="file" id="profileImage">
+    <button onclick="login()">Login</button>
+  </div>
 
-<header>VM Dating App</header>
+  <div id="usersDiv" style="display:none;">
+    <h2>Users</h2>
+    <div id="usersList"></div>
+  </div>
 
-<div id="signup">
-<h3>Enter Your Details</h3>
-<input type="text" id="signupName" placeholder="Name">
-<input type="number" id="signupAge" placeholder="Age">
-<select id="signupGender">
-<option value="" disabled selected>Gender</option>
-<option value="Male">Male</option>
-<option value="Female">Female</option>
-<option value="Other">Other</option>
-</select>
-<input type="file" id="signupImage" accept="image/*">
-<button onclick="signUp()">Start</button>
-</div>
-
-<div id="profiles" style="display:none;">
-<h3>Browse Profiles</h3>
-<div class="profile-grid" id="profileGrid"></div>
-</div>
-
-<!-- Chat Popup -->
-<div id="chatPopup">
-<div id="chatMessages"></div>
-<div id="chatInput">
-<input type="text" id="chatText" placeholder="Type a message...">
-<button onclick="sendMessage()">Send</button>
-</div>
+  <div id="videoContainer">
+    <h3>Video Call</h3>
+    <video id="localVideo" autoplay muted></video>
+    <video id="remoteVideo" autoplay></video>
+    <button onclick="endCall()">End Call</button>
+  </div>
 </div>
 
-<!-- Video Call Popup -->
-<div id="videoPopup">
-<video id="localVideo" autoplay muted></video>
-<video id="remoteVideo" autoplay></video>
-<div id="videoButtons">
-<button onclick="endCall()">End Call</button>
-</div>
-</div>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <script>
-// Firebase Config
 const firebaseConfig = {
-apiKey: "AIzaSyDIzeINHRm-0jAfbsB0-7flr5sOasaEEy4",
-authDomain: "vmdatting.firebaseapp.com",
-projectId: "vmdatting",
-storageBucket: "vmdatting.firebasestorage.app",
-messagingSenderId: "876437607489",
-appId: "1:876437607489:web:46ad641659f621618562c0",
-measurementId: "G-XH9LHSPWYM"
+  apiKey: "AIzaSyDIzeINHRm-0jAfbsB0-7flr5sOasaEEy4",
+  authDomain: "vmdatting.firebaseapp.com",
+  databaseURL: "https://vmdatting-default-rtdb.firebaseio.com",
+  projectId: "vmdatting",
+  storageBucket: "vmdatting.firebasestorage.app",
+  messagingSenderId: "876437607489",
+  appId: "1:876437607489:web:46ad641659f621618562c0",
+  measurementId: "G-XH9LHSPWYM"
 };
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+
 const db = firebase.database();
 const storage = firebase.storage();
 
-let currentUserId = null;
-let chatWithId = null;
-let callPeerId = null;
-let localStream=null, peerConnection=null;
+let currentUser = null;
 
-// Anonymous login on page load
-auth.signInAnonymously().then(() => {
-currentUserId = auth.currentUser.uid;
-console.log("Anonymous UID:", currentUserId);
-}).catch(e=>console.error(e));
+// LOGIN FUNCTION
+async function login() {
+  const name = document.getElementById('name').value.trim();
+  const age = document.getElementById('age').value.trim();
+  const gender = document.getElementById('gender').value;
+  const file = document.getElementById('profileImage').files[0];
+  
+  if(!name || !age || !gender || !file) { alert("All fields required"); return; }
 
-// Sign Up
-async function signUp(){
-const name=document.getElementById('signupName').value;
-const age=parseInt(document.getElementById('signupAge').value);
-const gender=document.getElementById('signupGender').value;
-const file=document.getElementById('signupImage').files[0];
-if(!name||!age||!gender||!file){alert("Fill all fields");return;}
-if(age<18){alert("Must be 18+");return;}
-try{
-const imageRef=storage.ref('profiles/'+currentUserId+'/'+file.name);
-await imageRef.put(file);
-const imageUrl=await imageRef.getDownloadURL();
-db.ref('users/'+currentUserId).set({name,age,gender,imageUrl,online:true});
-document.getElementById('signup').style.display='none';
-loadProfiles();
-}catch(e){console.error(e);}
+  const imageRef = storage.ref('profiles/' + Date.now() + '_' + file.name);
+  await imageRef.put(file);
+  const imageUrl = await imageRef.getDownloadURL();
+
+  const userRef = db.ref('users').push();
+  const userData = { name, age, gender, imageUrl, online:true, blocked:false };
+  await userRef.set(userData);
+
+  currentUser = { id: userRef.key, ...userData };
+  document.getElementById('loginDiv').style.display='none';
+  document.getElementById('usersDiv').style.display='block';
+
+  listenUsers();
 }
 
-// Load Profiles
-function loadProfiles(){
-document.getElementById('profiles').style.display='block';
-db.ref('users').on('value', snapshot=>{
-const profiles=snapshot.val();
-const grid=document.getElementById('profileGrid');
-grid.innerHTML='';
-for(let uid in profiles){
-if(uid===currentUserId) continue;
-const p=profiles[uid];
-if(!p.age || p.age<18) continue;
-const card=document.createElement('div'); card.className='profile-card';
-card.innerHTML=`<img src="${p.imageUrl}" alt="${p.name}"><div class="online-dot" style="background:${p.online?'green':'gray'}"></div>`;
-card.onclick=()=>{openChat(uid,p.name); openCallOption(uid,p.name);};
-grid.appendChild(card);
-}
-});
+// LISTEN USERS
+function listenUsers() {
+  db.ref('users').on('value', snapshot => {
+    const usersList = document.getElementById('usersList');
+    usersList.innerHTML = '';
+    snapshot.forEach(child => {
+      const user = child.val();
+      const uid = child.key;
+      if(uid === currentUser.id) return; // skip self
+
+      const div = document.createElement('div');
+      div.className = 'user-card';
+      div.innerHTML = `
+        <div class="user-info">
+          <span class="status ${user.online?'online':'offline'}"></span>
+          <img src="${user.imageUrl}" />
+          <div>
+            <strong>${user.name}</strong> (${user.age}) <br> ${user.gender}
+          </div>
+        </div>
+        <div>
+          <button class="video-call" onclick="startCall('${uid}')">Video Call</button>
+          <button class="${user.blocked?'unblock-btn':'block-btn'}" onclick="toggleBlock('${uid}',${user.blocked})">${user.blocked?'Unblock':'Block'}</button>
+          <button class="report-btn" onclick="reportUser('${uid}')">Report</button>
+        </div>
+      `;
+      usersList.appendChild(div);
+    });
+  });
 }
 
-// Chat
-function openChat(uid,name){
-chatWithId=uid;
-document.getElementById('chatPopup').style.display='flex';
-const chatRef=db.ref('chats/'+[currentUserId,uid].sort().join('_'));
-chatRef.on('value', snap=>{
-const msgs=snap.val()||{};
-const chatMessages=document.getElementById('chatMessages');
-chatMessages.innerHTML='';
-for(let k in msgs){
-const m=document.createElement('div');
-m.textContent=`${msgs[k].sender===currentUserId?'Me':name}: ${msgs[k].text}`;
-chatMessages.appendChild(m);
-}
-chatMessages.scrollTop=chatMessages.scrollHeight;
-});
-}
-function sendMessage(){
-const text=document.getElementById('chatText').value;
-if(!text||!chatWithId) return;
-const chatRef=db.ref('chats/'+[currentUserId,chatWithId].sort().join('_'));
-chatRef.push({sender:currentUserId,text});
-document.getElementById('chatText').value='';
+// BLOCK/UNBLOCK USER
+function toggleBlock(uid, blocked) {
+  db.ref('users/'+uid).update({ blocked: !blocked });
 }
 
-// Video Call
-function openCallOption(uid,name){
-if(confirm(`Start video call with ${name}?`)){startCall(uid);}
-}
-async function startCall(peerId){
-callPeerId=peerId;
-document.getElementById('videoPopup').style.display='flex';
-localStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-document.getElementById('localVideo').srcObject=localStream;
-
-peerConnection=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-localStream.getTracks().forEach(track=>peerConnection.addTrack(track,localStream));
-peerConnection.ontrack=e=>{document.getElementById('remoteVideo').srcObject=e.streams[0];};
-peerConnection.onicecandidate=e=>{if(e.candidate){db.ref('video/'+callPeerId+'/'+currentUserId).push({candidate:e.candidate.toJSON()});}};
-
-db.ref('video/'+currentUserId+'/'+callPeerId).on('child_added', async snap=>{
-const data=snap.val();
-if(data.type==='offer'){await peerConnection.setRemoteDescription(new RTCSessionDescription(data)); const answer=await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref('video/'+callPeerId+'/'+currentUserId).push(peerConnection.localDescription.toJSON());}
-if(data.type==='answer'){await peerConnection.setRemoteDescription(new RTCSessionDescription(data));}
-if(data.candidate){try{await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));}catch(e){console.error(e);}}
-});
-
-const offer=await peerConnection.createOffer();
-await peerConnection.setLocalDescription(offer);
-db.ref('video/'+callPeerId+'/'+currentUserId).push(peerConnection.localDescription.toJSON());
-}
-function endCall(){
-if(peerConnection){peerConnection.close(); peerConnection=null;}
-if(localStream){localStream.getTracks().forEach(t=>t.stop());}
-document.getElementById('videoPopup').style.display='none';
-callPeerId=null;
+// REPORT USER
+function reportUser(uid) {
+  alert('Reported user: '+uid);
 }
 
-// Auto-load if already signed in
-auth.onAuthStateChanged(user=>{
-if(user){
-currentUserId=user.uid;
-db.ref('users/'+currentUserId).onDisconnect().update({online:false});
-loadProfiles();
+// VIDEO CALL SETUP (simplified peer-to-peer WebRTC)
+let localStream, pc, remoteVideo=document.getElementById('remoteVideo');
+async function startCall(uid) {
+  document.getElementById('videoContainer').style.display='block';
+  localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+  document.getElementById('localVideo').srcObject = localStream;
+
+  pc = new RTCPeerConnection();
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  
+  pc.ontrack = e => { remoteVideo.srcObject = e.streams[0]; }
+
+  // Simplified signaling using Firebase
+  const callRef = db.ref('calls/'+currentUser.id+'_'+uid);
+  pc.onicecandidate = e => { if(e.candidate) callRef.child('ice').push(JSON.stringify(e.candidate)); }
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await callRef.child('offer').set(JSON.stringify(offer));
+
+  callRef.child('answer').on('value', async snap => {
+    if(snap.exists() && snap.val()) {
+      const answer = JSON.parse(snap.val());
+      await pc.setRemoteDescription(answer);
+    }
+  });
+
+  callRef.child('ice').on('child_added', snap => {
+    const candidate = JSON.parse(snap.val());
+    pc.addIceCandidate(new RTCIceCandidate(candidate));
+  });
 }
-});
+
+// END CALL
+function endCall() {
+  if(pc) pc.close();
+  document.getElementById('videoContainer').style.display='none';
+}
 </script>
 </body>
 </html>
