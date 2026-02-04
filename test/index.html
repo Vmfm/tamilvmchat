@@ -1,193 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>VM Dating App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5; }
-    header { background:#ff4081; color:#fff; padding:10px 20px; text-align:center; font-size:1.5em; }
-    #login, #signup, #profiles { max-width: 400px; margin: 20px auto; padding:20px; background:#fff; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
-    input, select, button { width:100%; padding:10px; margin:8px 0; border-radius:5px; border:1px solid #ccc; }
-    button { background:#ff4081; color:#fff; border:none; cursor:pointer; }
-    button:hover { background:#e73370; }
-    .profile-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
-    .profile-card { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; border:1px solid #ddd; }
-    .profile-card img { width:100%; height:120px; object-fit:cover; }
-    .online-dot { position:absolute; top:5px; right:5px; width:15px; height:15px; border-radius:50%; background:green; border:2px solid #fff; }
-    #chatPopup { display:none; position:fixed; bottom:10px; right:10px; width:300px; max-height:400px; background:#fff; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.2); overflow:hidden; flex-direction:column; }
-    #chatMessages { flex:1; padding:10px; overflow-y:auto; }
-    #chatInput { display:flex; }
-    #chatInput input { flex:1; border-radius:0; border-right:none; }
-    #chatInput button { border-radius:0; }
-  </style>
+<meta charset="UTF-8">
+<title>VM Dating App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<style>
+body { font-family: Arial,sans-serif; margin:0; padding:0; background:#f5f5f5; }
+header { background:#ff4081; color:#fff; padding:10px 20px; text-align:center; font-size:1.5em; }
+#signup,#profiles { max-width:400px; margin:20px auto; padding:20px; background:#fff; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
+input,select,button { width:100%; padding:10px; margin:8px 0; border-radius:5px; border:1px solid #ccc; }
+button { background:#ff4081; color:#fff; border:none; cursor:pointer; }
+button:hover { background:#e73370; }
+.profile-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.profile-card { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; border:1px solid #ddd; }
+.profile-card img { width:100%; height:120px; object-fit:cover; }
+.online-dot { position:absolute; top:5px; right:5px; width:15px; height:15px; border-radius:50%; background:green; border:2px solid #fff; }
+#chatPopup,#videoPopup { display:none; position:fixed; bottom:10px; right:10px; width:300px; max-height:400px; background:#fff; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.2); flex-direction:column; }
+#chatMessages { flex:1; padding:10px; overflow-y:auto; }
+#chatInput { display:flex; }
+#chatInput input { flex:1; border-radius:0; border-right:none; }
+#chatInput button { border-radius:0; }
+#videoPopup video { width:100%; border-radius:10px; background:#000; }
+#videoButtons { display:flex; justify-content:space-around; margin:5px 0; }
+</style>
 </head>
 <body>
 
 <header>VM Dating App</header>
 
 <div id="signup">
-  <h3>Sign Up</h3>
-  <input type="text" id="signupName" placeholder="Name">
-  <input type="number" id="signupAge" placeholder="Age">
-  <select id="signupGender">
-    <option value="" disabled selected>Gender</option>
-    <option value="Male">Male</option>
-    <option value="Female">Female</option>
-    <option value="Other">Other</option>
-  </select>
-  <input type="file" id="signupImage" accept="image/*">
-  <input type="email" id="signupEmail" placeholder="Email">
-  <input type="password" id="signupPassword" placeholder="Password">
-  <button onclick="signUp()">Sign Up</button>
-  <p>Already have account? <a href="#" onclick="toggleForms('login')">Login</a></p>
-</div>
-
-<div id="login" style="display:none;">
-  <h3>Login</h3>
-  <input type="email" id="loginEmail" placeholder="Email">
-  <input type="password" id="loginPassword" placeholder="Password">
-  <button onclick="login()">Login</button>
-  <p>No account? <a href="#" onclick="toggleForms('signup')">Sign Up</a></p>
+<h3>Enter Your Details</h3>
+<input type="text" id="signupName" placeholder="Name">
+<input type="number" id="signupAge" placeholder="Age">
+<select id="signupGender">
+<option value="" disabled selected>Gender</option>
+<option value="Male">Male</option>
+<option value="Female">Female</option>
+<option value="Other">Other</option>
+</select>
+<input type="file" id="signupImage" accept="image/*">
+<button onclick="signUp()">Start</button>
 </div>
 
 <div id="profiles" style="display:none;">
-  <h3>Browse Profiles</h3>
-  <div class="profile-grid" id="profileGrid"></div>
+<h3>Browse Profiles</h3>
+<div class="profile-grid" id="profileGrid"></div>
 </div>
 
 <!-- Chat Popup -->
 <div id="chatPopup">
-  <div id="chatMessages"></div>
-  <div id="chatInput">
-    <input type="text" id="chatText" placeholder="Type a message...">
-    <button onclick="sendMessage()">Send</button>
-  </div>
+<div id="chatMessages"></div>
+<div id="chatInput">
+<input type="text" id="chatText" placeholder="Type a message...">
+<button onclick="sendMessage()">Send</button>
+</div>
+</div>
+
+<!-- Video Call Popup -->
+<div id="videoPopup">
+<video id="localVideo" autoplay muted></video>
+<video id="remoteVideo" autoplay></video>
+<div id="videoButtons">
+<button onclick="endCall()">End Call</button>
+</div>
 </div>
 
 <script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyDIzeINHRm-0jAfbsB0-7flr5sOasaEEy4",
-    authDomain: "vmdatting.firebaseapp.com",
-    projectId: "vmdatting",
-    storageBucket: "vmdatting.firebasestorage.app",
-    messagingSenderId: "876437607489",
-    appId: "1:876437607489:web:46ad641659f621618562c0",
-    measurementId: "G-XH9LHSPWYM"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-  const storage = firebase.storage();
+// Firebase Config
+const firebaseConfig = {
+apiKey: "AIzaSyDIzeINHRm-0jAfbsB0-7flr5sOasaEEy4",
+authDomain: "vmdatting.firebaseapp.com",
+projectId: "vmdatting",
+storageBucket: "vmdatting.firebasestorage.app",
+messagingSenderId: "876437607489",
+appId: "1:876437607489:web:46ad641659f621618562c0",
+measurementId: "G-XH9LHSPWYM"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const storage = firebase.storage();
 
-  let currentUserId = null;
-  let chatWithId = null;
+let currentUserId = localStorage.getItem('vmUserId') || null;
+let chatWithId = null;
+let callPeerId = null;
+let localStream=null, peerConnection=null;
 
-  function toggleForms(form) {
-    document.getElementById('signup').style.display = form==='signup'?'block':'none';
-    document.getElementById('login').style.display = form==='login'?'block':'none';
-  }
+// Sign Up
+async function signUp(){
+const name=document.getElementById('signupName').value;
+const age=parseInt(document.getElementById('signupAge').value);
+const gender=document.getElementById('signupGender').value;
+const file=document.getElementById('signupImage').files[0];
+if(!name||!age||!gender||!file){alert("Fill all fields");return;}
+if(age<18){alert("Must be 18+");return;}
+try{
+currentUserId='user_'+Date.now(); // random id
+localStorage.setItem('vmUserId', currentUserId);
+const imageRef=storage.ref('profiles/'+currentUserId+'/'+file.name);
+await imageRef.put(file);
+const imageUrl=await imageRef.getDownloadURL();
+db.ref('users/'+currentUserId).set({name,age,gender,imageUrl,online:true});
+document.getElementById('signup').style.display='none';
+loadProfiles();
+}catch(e){console.error(e);}
+}
 
-  async function signUp() {
-    const name = document.getElementById('signupName').value;
-    const age = parseInt(document.getElementById('signupAge').value);
-    const gender = document.getElementById('signupGender').value;
-    const email = document.getElementById('signupEmail').value;
-    const password = document.getElementById('signupPassword').value;
-    const file = document.getElementById('signupImage').files[0];
+// Load Profiles
+function loadProfiles(){
+document.getElementById('profiles').style.display='block';
+db.ref('users').on('value', snapshot=>{
+const profiles=snapshot.val();
+const grid=document.getElementById('profileGrid');
+grid.innerHTML='';
+for(let uid in profiles){
+if(uid===currentUserId) continue;
+const p=profiles[uid];
+if(!p.age || p.age<18) continue;
+const card=document.createElement('div'); card.className='profile-card';
+card.innerHTML=`<img src="${p.imageUrl}" alt="${p.name}"><div class="online-dot" style="background:${p.online?'green':'gray'}"></div>`;
+card.onclick=()=>{openChat(uid,p.name); openCallOption(uid,p.name);};
+grid.appendChild(card);
+}
+});
+}
 
-    if (!name || !age || !gender || !email || !password || !file) { alert("Fill all fields"); return; }
-    if (age < 18) { alert("You must be 18+ to join"); return; }
+// Chat
+function openChat(uid,name){
+chatWithId=uid;
+document.getElementById('chatPopup').style.display='flex';
+const chatRef=db.ref('chats/'+[currentUserId,uid].sort().join('_'));
+chatRef.on('value', snap=>{
+const msgs=snap.val()||{};
+const chatMessages=document.getElementById('chatMessages');
+chatMessages.innerHTML='';
+for(let k in msgs){
+const m=document.createElement('div');
+m.textContent=`${msgs[k].sender===currentUserId?'Me':name}: ${msgs[k].text}`;
+chatMessages.appendChild(m);
+}
+chatMessages.scrollTop=chatMessages.scrollHeight;
+});
+}
+function sendMessage(){
+const text=document.getElementById('chatText').value;
+if(!text||!chatWithId) return;
+const chatRef=db.ref('chats/'+[currentUserId,chatWithId].sort().join('_'));
+chatRef.push({sender:currentUserId,text});
+document.getElementById('chatText').value='';
+}
 
-    try {
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-      currentUserId = userCredential.user.uid;
+// Video Call
+function openCallOption(uid,name){
+if(confirm(`Start video call with ${name}?`)){startCall(uid);}
+}
+async function startCall(peerId){
+callPeerId=peerId;
+document.getElementById('videoPopup').style.display='flex';
+localStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+document.getElementById('localVideo').srcObject=localStream;
 
-      const imageRef = storage.ref('profiles/' + currentUserId + '/' + file.name);
-      await imageRef.put(file);
-      const imageUrl = await imageRef.getDownloadURL();
+peerConnection=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+localStream.getTracks().forEach(track=>peerConnection.addTrack(track,localStream));
+peerConnection.ontrack=e=>{document.getElementById('remoteVideo').srcObject=e.streams[0];};
+peerConnection.onicecandidate=e=>{if(e.candidate){db.ref('video/'+callPeerId+'/'+currentUserId).push({candidate:e.candidate.toJSON()});}};
 
-      db.ref('users/' + currentUserId).set({
-        name, age, gender, imageUrl, online:true
-      });
+db.ref('video/'+currentUserId+'/'+callPeerId).on('child_added', async snap=>{
+const data=snap.val();
+if(data.type==='offer'){await peerConnection.setRemoteDescription(new RTCSessionDescription(data)); const answer=await peerConnection.createAnswer(); await peerConnection.setLocalDescription(answer); db.ref('video/'+callPeerId+'/'+currentUserId).push(peerConnection.localDescription.toJSON());}
+if(data.type==='answer'){await peerConnection.setRemoteDescription(new RTCSessionDescription(data));}
+if(data.candidate){try{await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));}catch(e){console.error(e);}}
+});
 
-      document.getElementById('signup').style.display = 'none';
-      loadProfiles();
-    } catch (error) {
-      alert(error.message);
-    }
-  }
+const offer=await peerConnection.createOffer();
+await peerConnection.setLocalDescription(offer);
+db.ref('video/'+callPeerId+'/'+currentUserId).push(peerConnection.localDescription.toJSON());
+}
+function endCall(){
+if(peerConnection){peerConnection.close(); peerConnection=null;}
+if(localStream){localStream.getTracks().forEach(t=>t.stop());}
+document.getElementById('videoPopup').style.display='none';
+callPeerId=null;
+}
 
-  async function login() {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    try {
-      const userCredential = await auth.signInWithEmailAndPassword(email, password);
-      currentUserId = userCredential.user.uid;
-      db.ref('users/' + currentUserId).update({online:true});
-      document.getElementById('login').style.display = 'none';
-      loadProfiles();
-    } catch (error) { alert(error.message); }
-  }
-
-  function loadProfiles() {
-    document.getElementById('profiles').style.display='block';
-    db.ref('users').on('value', snapshot => {
-      const profiles = snapshot.val();
-      const grid = document.getElementById('profileGrid');
-      grid.innerHTML='';
-      for (let uid in profiles) {
-        if (uid === currentUserId) continue;
-        const p = profiles[uid];
-        if (!p.age || p.age < 18) continue; // auto remove underage
-        const card = document.createElement('div'); card.className='profile-card';
-        card.innerHTML = `<img src="${p.imageUrl}" alt="${p.name}"><div class="online-dot" style="background:${p.online?'green':'gray'}"></div>`;
-        card.onclick = () => openChat(uid, p.name);
-        grid.appendChild(card);
-      }
-    });
-  }
-
-  function openChat(uid, name) {
-    chatWithId = uid;
-    document.getElementById('chatPopup').style.display='flex';
-    const chatRef = db.ref('chats/' + [currentUserId, uid].sort().join('_'));
-    chatRef.on('value', snap => {
-      const msgs = snap.val() || {};
-      const chatMessages = document.getElementById('chatMessages');
-      chatMessages.innerHTML='';
-      for (let k in msgs) {
-        const m = document.createElement('div');
-        m.textContent = `${msgs[k].sender === currentUserId?'Me':name}: ${msgs[k].text}`;
-        chatMessages.appendChild(m);
-      }
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    });
-  }
-
-  function sendMessage() {
-    const text = document.getElementById('chatText').value;
-    if (!text || !chatWithId) return;
-    const chatRef = db.ref('chats/' + [currentUserId, chatWithId].sort().join('_'));
-    chatRef.push({sender:currentUserId, text});
-    document.getElementById('chatText').value='';
-  }
-
-  // Set offline on disconnect
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUserId = user.uid;
-      db.ref('users/' + currentUserId).onDisconnect().update({online:false});
-      loadProfiles();
-    }
-  });
+// Auto-load if user exists
+if(currentUserId){
+document.getElementById('signup').style.display='none';
+db.ref('users/'+currentUserId).update({online:true});
+loadProfiles();
+}
 </script>
-
 </body>
 </html>
