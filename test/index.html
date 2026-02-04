@@ -1,32 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Firebase Dating App – Single HTML</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="theme-color" content="#ff2f6d" />
+<title>All‑in‑One Firebase Dating App (Single HTML)</title>
 
-<!-- Firebase -->
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#0f0f0f;color:#fff}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Arial;background:#0f0f0f;color:#fff}
 .hidden{display:none}
-header{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#1b1b1b}
+header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:10px;background:#1b1b1b}
 .icon{cursor:pointer;font-size:20px;margin:0 6px}
-.card{max-width:420px;margin:20px auto;background:#1c1c1c;padding:15px;border-radius:14px}
-input,select,button{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:none}
-button{background:#ff2f6d;color:#fff;font-weight:bold;cursor:pointer}
+.badge{background:#ff2f6d;border-radius:10px;padding:0 6px;font-size:12px;margin-left:4px}
+.card{max-width:420px;margin:16px auto;background:#1c1c1c;padding:14px;border-radius:16px}
+input,select,button{width:100%;padding:10px;margin:6px 0;border-radius:10px;border:none}
+button{background:#ff2f6d;color:#fff;font-weight:700}
+button.secondary{background:#333}
+#deck{max-width:420px;margin:10px auto}
+.swipe-card{background:#222;border-radius:18px;padding:14px}
+.swipe-card img{width:100%;height:260px;object-fit:cover;border-radius:14px}
+.swipe-actions{display:flex;gap:10px;margin-top:10px}
+.profile-list{max-width:420px;margin:auto}
 .profile{display:flex;align-items:center;background:#222;padding:10px;border-radius:12px;margin:8px 0;cursor:pointer}
-.profile img{width:60px;height:60px;border-radius:50%;object-fit:cover;margin-right:10px}
+.profile img{width:56px;height:56px;border-radius:50%;object-fit:cover;margin-right:10px}
 .online{width:10px;height:10px;background:lime;border-radius:50%;margin-left:auto}
-#profiles{max-width:420px;margin:auto}
-#chat{position:fixed;bottom:0;left:0;right:0;background:#111;border-radius:16px 16px 0 0;padding:10px}
-#messages{height:180px;overflow:auto;background:#000;border-radius:8px;padding:6px}
-#messages div{margin:4px 0}
-.videoBox video{width:100%;border-radius:10px;background:#000}
+#chat{position:fixed;bottom:0;left:0;right:0;background:#111;border-radius:18px 18px 0 0;padding:10px;z-index:6}
+#messages{height:200px;overflow:auto;background:#000;border-radius:10px;padding:6px}
+#messages .me{text-align:right;color:#ffb3c8}
+#messages .them{text-align:left}
+.callbar{display:flex;gap:8px}
+.videoBox{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.videoBox video{width:100%;background:#000;border-radius:10px}
+.settings-row{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
 </style>
 </head>
 <body>
@@ -36,7 +48,8 @@ button{background:#ff2f6d;color:#fff;font-weight:bold;cursor:pointer}
     <span class="icon" onclick="openSettings()">⚙️</span>
   </div>
   <div>
-    <span class="icon">🔔 <span id="notif">0</span></span>
+    <span class="icon" onclick="toggleList()">💘</span>
+    <span class="icon" onclick="openNotifications()">🔔<span id="notif" class="badge hidden">0</span></span>
     <span class="icon" onclick="logout()">🚪</span>
   </div>
 </header>
@@ -44,43 +57,48 @@ button{background:#ff2f6d;color:#fff;font-weight:bold;cursor:pointer}
 <!-- LOGIN -->
 <div class="card" id="login">
   <h2>Login</h2>
-  <input id="name" placeholder="Name">
-  <input id="age" type="number" placeholder="Age">
+  <input id="name" placeholder="Name" required />
+  <input id="age" type="number" placeholder="Age" required />
   <select id="gender"><option>Male</option><option>Female</option></select>
-  <input type="file" id="photo">
+  <input type="file" id="photo" accept="image/*" required />
   <button onclick="loginUser()">Continue</button>
 </div>
 
-<!-- PROFILES -->
-<div id="profiles" class="hidden"></div>
+<!-- SWIPE DECK -->
+<div id="deck" class="hidden"></div>
+
+<!-- LIST VIEW -->
+<div id="profiles" class="profile-list hidden"></div>
 
 <!-- CHAT -->
 <div id="chat" class="hidden">
   <h3 id="chatName"></h3>
   <div id="messages"></div>
-  <input id="msg" placeholder="Message">
+  <input id="msg" placeholder="Message" />
   <button onclick="sendMsg()">Send</button>
-  <button onclick="startAudio()">📞 Audio Call</button>
-  <button onclick="startVideo()">🎥 Video Call</button>
-  <button onclick="block()">🚫 Block</button>
+  <div class="callbar">
+    <button class="secondary" onclick="startAudio()">📞 Audio</button>
+    <button class="secondary" onclick="startVideo()">🎥 Video</button>
+    <button class="secondary" onclick="toggleBlock()">🚫 Block/Unblock</button>
+  </div>
   <div class="videoBox hidden" id="videoBox">
-    <video id="local" autoplay muted></video>
-    <video id="remote" autoplay></video>
+    <video id="local" autoplay muted playsinline></video>
+    <video id="remote" autoplay playsinline></video>
   </div>
 </div>
 
 <!-- SETTINGS -->
 <div class="card hidden" id="settings">
   <h3>Settings</h3>
-  <label><input type="checkbox" id="audioOn" checked> Audio Call</label><br>
-  <label><input type="checkbox" id="videoOn" checked> Video Call</label><br>
-  <input type="file" id="newPhoto">
-  <button onclick="changePhoto()">Change Image</button>
-  <button onclick="closeSettings()">Close</button>
+  <div class="settings-row"><span>Audio Call</span><input type="checkbox" id="audioOn" checked /></div>
+  <div class="settings-row"><span>Video Call</span><input type="checkbox" id="videoOn" checked /></div>
+  <input type="file" id="newPhoto" accept="image/*" />
+  <button onclick="changePhoto()">Change Profile Image</button>
+  <button class="secondary" onclick="closeSettings()">Close</button>
 </div>
 
 <script>
-// Firebase config
+// ===== Firebase =====
 firebase.initializeApp({
   apiKey: "AIzaSyAlWP5D79PsX29H0hIZlfvL0YV5Us7v5I4",
   authDomain: "sample-firebase-ai-app-1f408.firebaseapp.com",
@@ -90,111 +108,154 @@ firebase.initializeApp({
   messagingSenderId: "657942233322",
   appId: "1:657942233322:web:a8dd9896ca8cfccdbb5793"
 });
-
 const auth=firebase.auth();
 const db=firebase.database();
 const st=firebase.storage();
-let me=null,peerId=null,pc=null,stream=null;
 
-// auto login
-auth.onAuthStateChanged(u=>{if(u){me=u;loadProfiles();}});
+let me=null,peerId=null,usersCache=[],blocked=new Set();
+let pc=null,stream=null;
+const ice={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+
+// ===== Auth =====
+auth.onAuthStateChanged(u=>{ if(u){ me=u; afterLogin(); }});
 
 function loginUser(){
- auth.signInAnonymously().then(r=>{
-  me=r.user;
-  const f=photo.files[0];
-  const ref=st.ref('profiles/'+me.uid);
-  ref.put(f).then(()=>ref.getDownloadURL()).then(url=>{
-    db.ref('users/'+me.uid).set({name:name.value,age:age.value,gender:gender.value,img:url,online:true});
-    loadProfiles();
+  if(!photo.files[0]) return alert('Select image');
+  auth.signInAnonymously().then(res=>{
+    me=res.user;
+    const ref=st.ref('profiles/'+me.uid);
+    ref.put(photo.files[0]).then(()=>ref.getDownloadURL()).then(url=>{
+      return db.ref('users/'+me.uid).set({name:name.value,age:age.value,gender:gender.value,img:url,online:true});
+    }).then(afterLogin);
   });
- });
 }
 
-function loadProfiles(){
- login.classList.add('hidden');
- top.classList.remove('hidden');
- profiles.classList.remove('hidden');
- db.ref('users').on('value',s=>{
+function afterLogin(){
+  login.classList.add('hidden');
+  top.classList.remove('hidden');
+  deck.classList.remove('hidden');
+  listenUsers();
+  listenNotifications();
+}
+
+// ===== Users / Swipe =====
+function listenUsers(){
+  db.ref('blocks/'+me.uid).on('value',s=>{ blocked=new Set(Object.keys(s.val()||{})); render(); });
+  db.ref('users').on('value',snap=>{
+    usersCache=[];
+    snap.forEach(c=>{ if(c.key!==me.uid) usersCache.push({id:c.key,...c.val()}); });
+    render();
+  });
+}
+
+function render(){
+  renderSwipe(); renderList();
+}
+
+function renderSwipe(){
+  deck.innerHTML='';
+  const u=usersCache.find(x=>!blocked.has(x.id));
+  if(!u){ deck.innerHTML='<p style="text-align:center">No more profiles</p>'; return; }
+  const c=document.createElement('div'); c.className='swipe-card';
+  c.innerHTML=`<img src="${u.img}"><h3>${u.name}, ${u.age}</h3><p>${u.gender}</p>`;
+  const a=document.createElement('div'); a.className='swipe-actions';
+  a.innerHTML=`<button class="secondary" onclick="pass('${u.id}')">❌ Pass</button><button onclick="like('${u.id}')">❤️ Like</button>`;
+  deck.appendChild(c); deck.appendChild(a);
+}
+
+function pass(id){ usersCache=usersCache.filter(u=>u.id!==id); renderSwipe(); }
+function like(id){ openChat(id, (usersCache.find(u=>u.id===id)||{}).name||'Chat'); }
+
+function toggleList(){ deck.classList.toggle('hidden'); profiles.classList.toggle('hidden'); }
+
+function renderList(){
   profiles.innerHTML='';
-  s.forEach(c=>{
-   if(c.key!==me.uid){
-    const u=c.val();
-    const d=document.createElement('div');
-    d.className='profile';
+  usersCache.forEach(u=>{
+    if(blocked.has(u.id)) return;
+    const d=document.createElement('div'); d.className='profile';
     d.innerHTML=`<img src="${u.img}"><div>${u.name}, ${u.age} (${u.gender})</div><div class="online"></div>`;
-    d.onclick=()=>openChat(c.key,u.name);
+    d.onclick=()=>openChat(u.id,u.name);
     profiles.appendChild(d);
-   }
   });
- });
 }
 
-function openChat(id,name){peerId=id;chatName.innerText=name;chat.classList.remove('hidden');loadChat();}
+// ===== Chat & Notifications =====
+function openChat(id,name){ peerId=id; chatName.textContent=name; chat.classList.remove('hidden'); loadChat(); }
 
 function loadChat(){
- messages.innerHTML='';
- db.ref('chat/'+me.uid+'/'+peerId).on('child_added',s=>{
-  const d=document.createElement('div');d.innerText=s.val().t;messages.appendChild(d);
- });
+  messages.innerHTML='';
+  db.ref('chat/'+me.uid+'/'+peerId).off();
+  db.ref('chat/'+me.uid+'/'+peerId).on('child_added',s=>{
+    const d=document.createElement('div'); d.textContent=s.val().t; d.className=s.val().from===me.uid?'me':'them'; messages.appendChild(d);
+  });
 }
 
 function sendMsg(){
- const t=msg.value;
- db.ref('chat/'+me.uid+'/'+peerId).push({t});
- db.ref('chat/'+peerId+'/'+me.uid).push({t});
- msg.value='';
+  if(!msg.value) return;
+  const payload={t:msg.value,from:me.uid,ts:Date.now()};
+  db.ref('chat/'+me.uid+'/'+peerId).push(payload);
+  db.ref('chat/'+peerId+'/'+me.uid).push(payload);
+  db.ref('notif/'+peerId).push({from:me.uid});
+  msg.value='';
 }
 
-// WEBRTC
-const ice={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+function listenNotifications(){
+  db.ref('notif/'+me.uid).on('value',s=>{
+    const c=s.numChildren();
+    if(c>0){ notif.textContent=c; notif.classList.remove('hidden'); }
+    else notif.classList.add('hidden');
+  });
+}
 
-async function startAudio(){if(!audioOn.checked)return;await startCall(false);}
-async function startVideo(){if(!videoOn.checked)return;await startCall(true);}
+function openNotifications(){ db.ref('notif/'+me.uid).remove(); alert('Notifications cleared'); }
+
+// ===== Block =====
+function toggleBlock(){ if(!peerId) return; const r=db.ref('blocks/'+me.uid+'/'+peerId); r.once('value').then(s=>{ s.exists()?r.remove():r.set(true); }); }
+
+// ===== WebRTC =====
+async function startAudio(){ if(!audioOn.checked) return; await startCall(false); }
+async function startVideo(){ if(!videoOn.checked) return; await startCall(true); }
 
 async function startCall(video){
- videoBox.classList.remove('hidden');
- stream=await navigator.mediaDevices.getUserMedia({audio:true,video:video});
- local.srcObject=stream;
- pc=new RTCPeerConnection(ice);
- stream.getTracks().forEach(t=>pc.addTrack(t,stream));
- pc.ontrack=e=>remote.srcObject=e.streams[0];
- pc.onicecandidate=e=>{if(e.candidate)db.ref('calls/'+peerId+'/ice').push(JSON.stringify(e.candidate));};
- const offer=await pc.createOffer();
- await pc.setLocalDescription(offer);
- db.ref('calls/'+peerId+'/offer').set(JSON.stringify(offer));
- listenAnswer();
-}
-
-function listenAnswer(){
- db.ref('calls/'+me.uid+'/answer').on('value',async s=>{
-  if(s.val()){await pc.setRemoteDescription(JSON.parse(s.val()));}
- });
- db.ref('calls/'+me.uid+'/ice').on('child_added',s=>pc.addIceCandidate(JSON.parse(s.val())));
-}
-
-// incoming
-db.ref('calls/'+me?.uid+'/offer').on('value',async s=>{
- if(s.val()&&!pc){
   videoBox.classList.remove('hidden');
-  stream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+  stream=await navigator.mediaDevices.getUserMedia({audio:true,video});
   local.srcObject=stream;
   pc=new RTCPeerConnection(ice);
   stream.getTracks().forEach(t=>pc.addTrack(t,stream));
   pc.ontrack=e=>remote.srcObject=e.streams[0];
-  pc.onicecandidate=e=>{if(e.candidate)db.ref('calls/'+peerId+'/ice').push(JSON.stringify(e.candidate));};
-  await pc.setRemoteDescription(JSON.parse(s.val()));
-  const ans=await pc.createAnswer();
-  await pc.setLocalDescription(ans);
-  db.ref('calls/'+peerId+'/answer').set(JSON.stringify(ans));
- }
-});
+  pc.onicecandidate=e=>{ if(e.candidate) db.ref('calls/'+peerId+'/ice').push(JSON.stringify(e.candidate)); };
+  const offer=await pc.createOffer(); await pc.setLocalDescription(offer);
+  db.ref('calls/'+peerId+'/offer').set(JSON.stringify(offer));
+  db.ref('calls/'+me.uid+'/answer').on('value',async s=>{ if(s.val()) await pc.setRemoteDescription(JSON.parse(s.val())); });
+}
 
-function block(){db.ref('users/'+peerId).remove();alert('Blocked');}
-function openSettings(){settings.classList.remove('hidden');}
-function closeSettings(){settings.classList.add('hidden');}
-function changePhoto(){const f=newPhoto.files[0];const r=st.ref('profiles/'+me.uid);r.put(f).then(()=>r.getDownloadURL()).then(u=>db.ref('users/'+me.uid+'/img').set(u));}
-function logout(){auth.signOut();location.reload();}
+// incoming offers
+(function listenIncoming(){
+  auth.onAuthStateChanged(u=>{
+    if(!u) return;
+    db.ref('calls/'+u.uid+'/offer').on('value',async s=>{
+      if(!s.val()) return;
+      videoBox.classList.remove('hidden');
+      stream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+      local.srcObject=stream;
+      pc=new RTCPeerConnection(ice);
+      stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+      pc.ontrack=e=>remote.srcObject=e.streams[0];
+      pc.onicecandidate=e=>{ if(e.candidate) db.ref('calls/'+peerId+'/ice').push(JSON.stringify(e.candidate)); };
+      await pc.setRemoteDescription(JSON.parse(s.val()));
+      const ans=await pc.createAnswer(); await pc.setLocalDescription(ans);
+      db.ref('calls/'+peerId+'/answer').set(JSON.stringify(ans));
+    });
+    db.ref('calls/'+u.uid+'/ice').on('child_added',s=>{ try{ pc&&pc.addIceCandidate(JSON.parse(s.val())); }catch(e){} });
+  });
+})();
+
+// ===== Settings =====
+function openSettings(){ settings.classList.remove('hidden'); }
+function closeSettings(){ settings.classList.add('hidden'); }
+function changePhoto(){ if(!newPhoto.files[0]) return; const r=st.ref('profiles/'+me.uid); r.put(newPhoto.files[0]).then(()=>r.getDownloadURL()).then(u=>db.ref('users/'+me.uid+'/img').set(u)); }
+
+function logout(){ auth.signOut(); location.reload(); }
 </script>
 </body>
 </html>
