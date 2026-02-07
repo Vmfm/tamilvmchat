@@ -187,8 +187,8 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div id="typingPrivate" class="small"></div>
     <div id="privateInputBar">
       <input type="file" id="privImgFile" accept="image/*" style="display:none">
-      <button class="mediaBtn" onclick="document.getElementById('privImgFile').click()">📷</button>
-      <button class="mediaBtn" id="micBtn">🎤</button>
+      <button class="mediaBtn" onclick="document.getElementById('privImgFile').click()" title="Send Image">📷</button>
+      <button class="mediaBtn" id="micBtn" title="Voice Message (Max 10s)">🎤</button>
       <input id="privateInput" placeholder="Type a message" autocomplete="off"/>
       <button id="privateSend">➤</button>
     </div>
@@ -252,10 +252,11 @@ let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
 if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
 
-/* VOICE & IMAGE LOGIC */
-let mediaRecorder, audioChunks = [];
+/* VOICE & MEDIA ADDITIONS */
+let mediaRecorder, audioChunks = [], recordTimer;
 micBtn.onclick = async () => {
   if (mediaRecorder && mediaRecorder.state === "recording") {
+    clearTimeout(recordTimer);
     mediaRecorder.stop();
     micBtn.classList.remove('recording');
     return;
@@ -270,10 +271,19 @@ micBtn.onclick = async () => {
       const reader = new FileReader();
       reader.onload = e => sendPrivateMedia(e.target.result, 'voice');
       reader.readAsDataURL(blob);
+      stream.getTracks().forEach(track => track.stop());
     };
     mediaRecorder.start();
     micBtn.classList.add('recording');
-  } catch (err) { showToast("Microphone access denied"); }
+    // Auto-stop after 10 seconds
+    recordTimer = setTimeout(() => {
+      if (mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        micBtn.classList.remove('recording');
+        showToast("Recording limit reached (10s)");
+      }
+    }, 10000);
+  } catch (err) { showToast("Mic permission denied"); }
 };
 
 privImgFile.onchange = e => {
@@ -435,10 +445,10 @@ function renderPrivateMessageWithId(chatKey, id, msg){
   let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); }
   if(set.has(id)) return; set.add(id);
   const row = document.createElement('div'); row.className = 'private-row ' + (msg.name===username?'self':'');
-  let body = `<div class="private-bubble">${msg.text || ''}</div>`;
-  if(msg.image) body = `<div class="private-bubble"><img src="${msg.image}"></div>`;
-  if(msg.voice) body = `<div class="private-bubble"><audio controls src="${msg.voice}"></audio></div>`;
-  row.innerHTML = `${body}<div class="time">${formatTime(msg.time)}</div>`;
+  let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`;
+  if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`;
+  if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`;
+  row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)}</div>`;
   privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
 }
 
