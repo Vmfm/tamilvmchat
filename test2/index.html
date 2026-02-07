@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>WhatsApp Ultra</title>
+<style>
+:root{--bg:#111b21;--panel:#202c33;--accent:#25d366;--muted:#97a4ab;--outgoing:#005c4b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+#app{max-width:1100px;margin:0 auto;width:100%;height:100vh;display:flex;flex-direction:column;position:relative;transition:transform .28s ease}
+#topBar{padding:8px 12px;background:#0b141a;display:flex;align-items:center;gap:12px;z-index:5}
+#title{font-weight:600}
+.bell{position:relative;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);border:1px solid rgba(255,255,255,.04)}
+.badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:12px;background:#ff3b30;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;padding:0 6px}
+
+/* PANEL */
+#panel{position:fixed;right:0;top:0;height:100vh;width:360px;background:#081214;border-left:1px solid rgba(255,255,255,.03);transform:translateX(100%);transition:transform .28s ease;z-index:20;box-shadow:-20px 0 60px rgba(0,0,0,.6);display:flex;flex-direction:column}
+#panel.open{transform:translateX(0)}
+.panelHeader{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px}
+.panelList{padding:8px;overflow:auto;flex:1}
+.panelItem{padding:12px;border-radius:8px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:4px;background:rgba(255,255,255,0.02)}
+
+/* MESSAGES */
+#messages, #privateMessages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#0b141a}
+.msg-row{display:flex;align-items:flex-end;max-width:85%}
+.msg-row.self{align-self:flex-end;flex-direction:row-reverse}
+.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;position:relative}
+.self .bubble{background:var(--outgoing)}
+.msg-img{max-width:200px;border-radius:8px;cursor:pointer;display:block;margin-top:5px}
+.time{font-size:10px;color:var(--muted);text-align:right;margin-top:4px}
+.avatar{width:36px;height:36px;border-radius:50%;background:#333;margin:0 8px;overflow:hidden;flex-shrink:0}
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+/* CONTROLS */
+#inputBar, #privateInputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
+input[type="text"]{flex:1;padding:10px 16px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none}
+.icon-btn{background:none;border:0;color:var(--muted);cursor:pointer;font-size:20px;padding:5px}
+.send-btn{width:40px;height:40px;border-radius:50%;border:0;background:var(--accent);color:#000;cursor:pointer}
+
+/* PRIVATE POPUP */
+#privatePopup{position:fixed;inset:0;display:none;background:rgba(0,0,0,.8);z-index:1000;justify-content:center;align-items:center}
+.card{width:100%;max-width:500px;height:90vh;background:#0b141a;display:flex;flex-direction:column;border-radius:12px;overflow:hidden}
+#privateHeader{padding:12px;background:var(--panel);display:flex;align-items:center;gap:10px}
+
+/* VOICE */
+#voiceRecBar{display:none;background:var(--panel);padding:10px;align-items:center;gap:15px;color:#ff3b30;font-weight:bold}
+.dot{width:10px;height:10px;background:#ff3b30;border-radius:50%;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* LOGIN */
+#loginWrap{position:fixed;inset:0;background:#111b21;display:flex;align-items:center;justify-content:center;z-index:9999}
+#loginCard{background:var(--panel);padding:30px;border-radius:16px;text-align:center;width:320px}
+#loginCard input{width:100%;padding:12px;margin:15px 0;border-radius:8px;border:0;background:#2a3942;color:#fff}
+
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#25d366;color:#000;padding:8px 16px;border-radius:20px;font-size:13px;z-index:10001;display:none}
+</style>
+</head>
+<body>
+
+<div id="loginWrap">
+  <div id="loginCard">
+    <h2 style="margin:0">Welcome</h2>
+    <input id="nameInput" placeholder="Enter your name" maxlength="15"/>
+    <button id="joinBtn" style="width:100%;padding:12px;border-radius:8px;border:0;background:var(--accent);cursor:pointer;font-weight:bold">Start Chatting</button>
+  </div>
+</div>
+
+<div id="panel">
+  <div class="panelHeader">
+    <div style="font-weight:700;flex:1">Private Chats</div>
+    <button id="panelClose" style="background:none;border:0;color:var(--accent);font-size:20px;cursor:pointer">✕</button>
+  </div>
+  <div class="panelList" id="panelList"></div>
+</div>
+
+<div id="app">
+  <div id="topBar">
+    <div id="title">Global Group</div>
+    <div style="flex:1"></div>
+    <div class="bell" id="bellBtn">🔔<div class="badge" id="bellBadge" style="display:none">0</div></div>
+  </div>
+
+  <div id="messages"></div>
+
+  <div id="inputBar">
+    <input id="messageInput" type="text" placeholder="Type a message..."/>
+    <button class="send-btn" id="sendBtn">➤</button>
+  </div>
+</div>
+
+<div id="privatePopup">
+  <div class="card">
+    <div id="privateHeader">
+      <button id="closePrivate" class="icon-btn">⬅</button>
+      <div id="privateTitle" style="font-weight:700;flex:1">Name</div>
+      <button id="clearChatBtn" class="icon-btn" title="Clear Chat">🗑️</button>
+    </div>
+    <div id="privateMessages"></div>
+    <div id="voiceRecBar"><div class="dot"></div> REC <span id="voiceTimer">0:00</span></div>
+    <div id="privateInputBar">
+      <label class="icon-btn">📷<input type="file" id="imgInput" hidden accept="image/*"></label>
+      <button id="voiceBtn" class="icon-btn">🎤</button>
+      <input id="privateInput" type="text" placeholder="Type message..."/>
+      <button id="privateSend" class="send-btn">➤</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+/* CONFIG - Same as your provided config */
+const firebaseConfig = {
+  apiKey: "AIzaSyB1VbLbqBxCiG_bfGoQgQyapXwHUQ-Q7BU",
+  authDomain: "tamil-chat-2d54e.firebaseapp.com",
+  databaseURL: "https://tamil-chat-2d54e-default-rtdb.firebaseio.com",
+  projectId: "tamil-chat-2d54e",
+  storageBucket: "tamil-chat-2d54e.appspot.com",
+  messagingSenderId: "804705969240",
+  appId: "1:804705969240:web:658df281dd8360843c162d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* APP STATE */
+let myName = localStorage.getItem('chatName') || '';
+let currentPrivatePartner = null;
+let mediaRecorder;
+let audioChunks = [];
+let voiceTimerInterval;
+
+/* NOTIFICATIONS */
+if (Notification.permission !== "granted") Notification.requestPermission();
+
+/* UI HELPERS */
+const $ = id => document.getElementById(id);
+const showToast = (txt) => { $('toast').textContent = txt; $('toast').style.display='block'; setTimeout(()=>$('toast').style.display='none', 2000); };
+const formatTime = (ts) => new Date(ts).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+const getChatId = (a, b) => [a, b].sort().join('_');
+
+/* INIT */
+if(myName) startApp();
+$('joinBtn').onclick = () => {
+    const n = $('nameInput').value.trim();
+    if(n) { myName = n; localStorage.setItem('chatName', n); startApp(); }
+};
+
+function startApp() {
+    $('loginWrap').style.display = 'none';
+    db.ref(`status/${myName}`).set(true);
+    db.ref(`status/${myName}`).onDisconnect().remove();
+    
+    listenGroup();
+    listenPrivateList();
+    listenDirectMessages();
+}
+
+/* GROUP CHAT */
+function listenGroup() {
+    db.ref('messages').limitToLast(40).on('child_added', snap => {
+        renderMsg($('messages'), snap.val(), snap.val().name === myName);
+    });
+}
+
+$('sendBtn').onclick = () => {
+    const text = $('messageInput').value.trim();
+    if(!text) return;
+    db.ref('messages').push({ name: myName, text, time: Date.now() });
+    $('messageInput').value = '';
+};
+
+/* PRIVATE CHAT LOGIC */
+function listenPrivateList() {
+    db.ref(`unread/${myName}`).on('value', snap => {
+        const unreads = snap.val() || {};
+        let total = 0;
+        $('panelList').innerHTML = '';
+        Object.keys(unreads).forEach(user => {
+            total += unreads[user];
+            const div = document.createElement('div');
+            div.className = 'panelItem';
+            div.innerHTML = `<div style="flex:1">${user}</div> ${unreads[user] ? `<div class="badge">${unreads[user]}</div>` : ''}`;
+            div.onclick = () => openPrivate(user);
+            $('panelList').appendChild(div);
+        });
+        $('bellBadge').textContent = total;
+        $('bellBadge').style.display = total > 0 ? 'flex' : 'none';
+    });
+}
+
+function openPrivate(partner) {
+    currentPrivatePartner = partner;
+    $('privateTitle').textContent = partner;
+    $('privateMessages').innerHTML = '';
+    $('privatePopup').style.display = 'flex';
+    db.ref(`unread/${myName}/${partner}`).set(0);
+    
+    const chatId = getChatId(myName, partner);
+    db.ref(`privates/${chatId}`).off();
+    db.ref(`privates/${chatId}`).on('child_added', snap => {
+        renderMsg($('privateMessages'), snap.val(), snap.val().name === myName);
+    });
+}
+
+/* SEND FUNCTIONS */
+async function sendPrivate(data) {
+    if(!currentPrivatePartner) return;
+    const chatId = getChatId(myName, currentPrivatePartner);
+    const msg = { name: myName, time: Date.now(), ...data };
+    db.ref(`privates/${chatId}`).push(msg);
+    db.ref(`unread/${currentPrivatePartner}/${myName}`).transaction(c => (c || 0) + 1);
+}
+
+$('privateSend').onclick = () => {
+    const text = $('privateInput').value.trim();
+    if(!text) return;
+    sendPrivate({ text });
+    $('privateInput').value = '';
+};
+
+/* IMAGE HANDLER */
+$('imgInput').onchange = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const max = 400;
+            let w = img.width, h = img.height;
+            if (w > h) { if (w > max) { h *= max / w; w = max; } }
+            else { if (h > max) { w *= max / h; h = max; } }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            sendPrivate({ image: canvas.toDataURL('image/jpeg', 0.7) });
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+/* VOICE HANDLER */
+$('voiceBtn').onclick = async () => {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = () => sendPrivate({ voice: reader.result });
+            reader.readAsDataURL(blob);
+            $('voiceRecBar').style.display = 'none';
+        };
+
+        mediaRecorder.start();
+        $('voiceRecBar').style.display = 'flex';
+        let sec = 0;
+        voiceTimerInterval = setInterval(() => {
+            sec++;
+            $('voiceTimer').textContent = `${Math.floor(sec/60)}:${(sec%60).toString().padStart(2,'0')}`;
+        }, 1000);
+        $('voiceBtn').textContent = '⏹️';
+    } else {
+        mediaRecorder.stop();
+        clearInterval(voiceTimerInterval);
+        $('voiceBtn').textContent = '🎤';
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    }
+};
+
+/* NOTIFICATION POPUP */
+function listenDirectMessages() {
+    db.ref(`unread/${myName}`).on('child_added', snap => {
+        if(snap.val() > 0 && Notification.permission === "granted") {
+            new Notification(`New Message from ${snap.key}`, { body: "Open chat to read." });
+        }
+    });
+}
+
+/* CLEAR CHAT */
+$('clearChatBtn').onclick = () => {
+    if(confirm("Clear this entire chat history?")) {
+        const chatId = getChatId(myName, currentPrivatePartner);
+        db.ref(`privates/${chatId}`).remove();
+        $('privateMessages').innerHTML = '';
+        showToast("Chat cleared");
+    }
+};
+
+/* UI RENDERING */
+function renderMsg(container, data, isSelf) {
+    const row = document.createElement('div');
+    row.className = `msg-row ${isSelf ? 'self' : ''}`;
+    
+    let content = '';
+    if(data.text) content = `<div>${data.text}</div>`;
+    if(data.image) content = `<img src="${data.image}" class="msg-img" onclick="window.open(this.src)">`;
+    if(data.voice) content = `<audio controls src="${data.voice}" style="width:200px;height:35px"></audio>`;
+
+    row.innerHTML = `
+        <div class="avatar">${data.name[0].toUpperCase()}</div>
+        <div class="bubble">
+            <div style="font-size:11px;color:var(--accent);font-weight:bold">${data.name}</div>
+            ${content}
+            <div class="time">${formatTime(data.time)}</div>
+        </div>
+    `;
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+}
+
+/* TOGGLES */
+$('bellBtn').onclick = () => $('panel').classList.toggle('open');
+$('panelClose').onclick = () => $('panel').classList.remove('open');
+$('closePrivate').onclick = () => $('privatePopup').style.display = 'none';
+
+</script>
+</body>
+</html>
