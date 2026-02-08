@@ -460,10 +460,8 @@ async function refreshPanelList(){
   });
 }
 
-/* FIXED CLEAR HISTORY LOGIC */
+/* MODIFIED CLEAR HISTORY - NO CONFIRMATION DIALOGUE */
 clearHistoryBtn.onclick = async () => { 
-  if(!confirm("Are you sure? This will delete all your private messages from the server.")) return;
-  
   // 1. Clear unread counters
   await db.ref(`unread/${username}`).remove(); 
   
@@ -474,13 +472,12 @@ clearHistoryBtn.onclick = async () => {
   const deletePromises = [];
   Object.keys(allChats).forEach(chatKey => {
     if(chatKey.includes(username)) {
-      // Deletes the actual message data in Firebase
       deletePromises.push(db.ref(`privateChats/${chatKey}`).remove());
     }
   });
   
   await Promise.all(deletePromises);
-  showToast("Chat history fully cleared"); 
+  showToast("Chat history cleared"); 
   refreshPanelList(); 
 };
 
