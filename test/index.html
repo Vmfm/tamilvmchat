@@ -38,13 +38,13 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;border:2px solid transparent;transition:border .18s ease-in-out;overflow:hidden}
 .avatar.online{border-color:var(--accent);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 1.5s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.6)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
-.popup-menu{display:none;position:absolute;top:-44px;left:0;background:var(--panel);border-radius:8px;padding:6px;flex-direction:column;z-index:30;min-width:110px}
-.avatar:hover .popup-menu{display:flex}
-.popup-menu button{background:none;border:0;color:#fff;padding:6px 8px;text-align:left;cursor:pointer;border-radius:6px}
 .bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
 .msg-row.self .bubble{background:#005c4b}
 .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-.time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right}
+.time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px}
+.read-status{font-size:14px;line-height:1}
+.read-status.read{color:#53bdeb}
+
 #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
 #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
 #sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
@@ -61,19 +61,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 /* SETTINGS PANEL FIX */
 #settingsWrap{position:relative}
 #settingsBtn{cursor:pointer;padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:transparent;color:var(--muted)}
-#settingsPanel{
-  position:absolute;
-  right:0;
-  top:48px;
-  background:#0b141a;
-  border:1px solid rgba(255,255,255,.1);
-  padding:12px;
-  border-radius:12px;
-  display:none;
-  z-index:100;
-  min-width:260px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-}
+#settingsPanel{position:absolute;right:0;top:48px;background:#0b141a;border:1px solid rgba(255,255,255,.1);padding:12px;border-radius:12px;display:none;z-index:100;min-width:260px;box-shadow: 0 8px 24px rgba(0,0,0,0.5)}
 .settingRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
 .settingRow:last-child{border-bottom:none}
 .toggleBtn{width:46px;height:26px;border-radius:16px;background:#2a3942;position:relative;cursor:pointer;flex-shrink:0}
@@ -94,6 +82,11 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 #privateMessages img{max-width:200px;border-radius:8px;margin-top:5px;display:block}
 #privateMessages audio{max-width:240px;height:35px;margin-top:5px}
 
+/* NEW: Unread divider */
+.unread-divider{text-align:center;margin:10px 0;position:relative;display:flex;align-items:center;justify-content:center}
+.unread-divider span{background:#2a3942;padding:4px 12px;border-radius:12px;font-size:11px;color:var(--accent);z-index:1}
+.unread-divider::after{content:'';position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,0.1)}
+
 /* CALLS */
 #callOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;color:#fff}
 .callCard{background:#071215;padding:32px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:14px;min-width:320px}
@@ -108,13 +101,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 @media(max-width:600px){
   #panel{width:100%} 
-  #settingsPanel {
-    position: fixed;
-    right: 10px;
-    left: 10px;
-    top: 60px;
-    min-width: auto;
-  }
+  #settingsPanel {position: fixed; right: 10px; left: 10px; top: 60px; min-width: auto;}
 }
 </style>
 </head>
@@ -152,7 +139,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
             <div style="margin-bottom:8px">Profile Image</div>
             <input type="file" id="profileImgInput" accept="image/*" style="color:#fff;font-size:12px; width:100%">
           </div>
-          <div style="font-size:11px;color:var(--muted);margin-top:8px">Your image is saved locally and to your profile.</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px">Your image is saved locally.</div>
         </div>
       </div>
     </div>
@@ -175,7 +162,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     <div style="font-weight:700;color:#fff">Enter your name</div>
     <input id="nameInput" placeholder="Your name" />
     <button id="joinBtn">Join</button>
-    <div style="font-size:12px;color:var(--muted)">Name is saved to this device.</div>
+    <div style="font-size:12px;color:var(--muted)">Name is saved locally.</div>
   </div>
 </div>
 
@@ -281,7 +268,6 @@ micBtn.onclick = async () => {
     };
     mediaRecorder.start();
     micBtn.classList.add('recording');
-    // Auto-stop after 10 seconds
     recordTimer = setTimeout(() => {
       if (mediaRecorder.state === "recording") {
         mediaRecorder.stop();
@@ -302,7 +288,7 @@ privImgFile.onchange = e => {
 function sendPrivateMedia(data, type) {
   if(!privateChatWith) return;
   const key = chatId(username, privateChatWith);
-  const msgData = { name:username, time:Date.now() };
+  const msgData = { name:username, time:Date.now(), read: false };
   if(type === 'image') msgData.image = data; else msgData.voice = data;
   db.ref(`privateChats/${key}`).push(msgData);
   db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1);
@@ -327,15 +313,6 @@ settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display 
 document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.style.display = 'none'; };
 toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
-profileImgInput.onchange = function(){
-  const file = this.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    profileImage = e.target.result; localStorage.setItem('profileImage', profileImage);
-    if(username) db.ref(`profiles/${username}`).update({ profileImage });
-    showToast('Profile image updated'); refreshAvatars();
-  }; reader.readAsDataURL(file);
-};
 
 /* CORE CHAT LOGIC */
 async function startAs(name){
@@ -357,7 +334,6 @@ function startGroupListeners(){
   if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML = '';
   currentGroupRef = db.ref('messages').limitToLast(50);
   currentGroupRef.on('child_added', snap => renderGroupMessage(snap.val(), snap.key));
-  currentGroupRef.on('child_removed', snap => { const el = messagesEl.querySelector(`[data-key="${snap.key}"]`); if(el) el.remove(); });
 }
 
 function renderGroupMessage(data, key){
@@ -392,7 +368,7 @@ function listenPresence(){
   db.ref('status').on('value', snap=>{ const val=snap.val()||{}; onlineCountEl.textContent=`${Object.keys(val).length} online`; document.querySelectorAll('.avatar').forEach(a=>{ const u=a.dataset.username; val[u]?a.classList.add('online'):a.classList.remove('online'); }); });
 }
 
-/* PRIVATE CHATS */
+/* PRIVATE CHATS & READ/UNREAD FEATURE */
 function watchPrivateChatsInitial(){
   db.ref('privateChats').on('child_added', snap => { if(snap.key.includes(username)) attachPrivateListener(snap.key); });
   listenUnreadForMe(); watchCallsForMe();
@@ -400,14 +376,28 @@ function watchPrivateChatsInitial(){
 
 function attachPrivateListener(chatKey){
   if(privateListeners.has(chatKey)) return;
-  const chatRef = db.ref(`privateChats/${chatKey}`).limitToLast(1);
-  const handler = chatRef.on('child_added', snap => {
+  const chatRef = db.ref(`privateChats/${chatKey}`);
+  
+  // Watch for new messages to trigger bell/unread
+  const handler = chatRef.limitToLast(1).on('child_added', snap => {
     const msg = snap.val(); if(!msg || msg.name === username) return;
     const other = chatKey.split('_').find(x=>x!==username);
-    if(privateChatWith === other && privatePopup.style.display === 'flex') renderPrivateMessageWithId(chatKey, snap.key, msg);
-    else { bellFlash(); }
+    if(privateChatWith === other && privatePopup.style.display === 'flex') {
+       // If chat open, mark as read immediately
+       if(!msg.read) db.ref(`privateChats/${chatKey}/${snap.key}`).update({read: true});
+    } else {
+       bellFlash();
+    }
     refreshPanelList();
   });
+  
+  // Watch for "read" status changes so sender sees blue checks
+  chatRef.on('child_changed', snap => {
+    const msg = snap.val();
+    const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`);
+    if(msgEl && msg.read) msgEl.classList.add('read');
+  });
+
   privateListeners.set(chatKey, { ref: chatRef, handler });
 }
 
@@ -434,47 +424,84 @@ async function refreshPanelList(){
   });
 }
 
-/* CLEAR HISTORY FEATURE */
 clearHistoryBtn.onclick = async () => {
-  if(!confirm("Clear all unread notifications?")) return;
+  if(!confirm("Clear all notifications?")) return;
   await db.ref(`unread/${username}`).remove();
   showToast("Notifications cleared");
   refreshPanelList();
 };
 
-function openPrivatePopup(other){
+async function openPrivatePopup(other){
   if(!settings.privateChat) return showToast('Private chat disabled');
   privateChatWith = other; privatePopup.style.display = 'flex';
   privateMessages.innerHTML = ''; privateTitle.textContent = `Chat with ${other}`;
-  db.ref(`unread/${username}/${other}`).set(0);
+  
   const key = chatId(username, other);
+  
+  // Mark all existing messages from "other" as read
+  const snapshot = await db.ref(`privateChats/${key}`).once('value');
+  let unreadCount = 0;
+  snapshot.forEach(child => {
+    const m = child.val();
+    if(m.name === other && !m.read) {
+        db.ref(`privateChats/${key}/${child.key}`).update({read: true});
+        unreadCount++;
+    }
+  });
+
+  db.ref(`unread/${username}/${other}`).set(0);
   if(currentPrivateRef) currentPrivateRef.off();
   renderedPrivateMsgIds.set(key, new Set());
+  
+  // Handle Divider logic
+  let dividerAdded = false;
   currentPrivateRef = db.ref(`privateChats/${key}`).limitToLast(50);
-  currentPrivateRef.on('child_added', snap => renderPrivateMessageWithId(key, snap.key, snap.val()));
+  currentPrivateRef.on('child_added', snap => {
+    const msg = snap.val();
+    // Show divider before the first unread message if it's from the other person
+    if(!dividerAdded && msg.name === other && !msg.read) {
+        const div = document.createElement('div'); div.className='unread-divider';
+        div.innerHTML = `<span>New Messages</span>`;
+        privateMessages.appendChild(div);
+        dividerAdded = true;
+    }
+    renderPrivateMessageWithId(key, snap.key, msg);
+    // Mark as read if it arrives while open
+    if(msg.name === other && !msg.read) db.ref(`privateChats/${key}/${snap.key}`).update({read: true});
+  });
+
   panelEl.classList.remove('open'); document.getElementById('app').style.transform = '';
 }
 
 function renderPrivateMessageWithId(chatKey, id, msg){
   let set = renderedPrivateMsgIds.get(chatKey); if(!set) { set = new Set(); renderedPrivateMsgIds.set(chatKey, set); }
   if(set.has(id)) return; set.add(id);
-  const row = document.createElement('div'); row.className = 'private-row ' + (msg.name===username?'self':'');
+  
+  const isSelf = msg.name === username;
+  const row = document.createElement('div'); 
+  row.className = 'private-row ' + (isSelf?'self':'');
+  row.dataset.msgid = id;
+
   let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`;
   if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`;
   if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`;
-  row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)}</div>`;
+  
+  const readClass = msg.read ? 'read' : '';
+  const statusHtml = isSelf ? `<span class="read-status ${readClass}">✓✓</span>` : '';
+  
+  row.innerHTML = `${bodyContent}<div class="time">${formatTime(msg.time)} ${statusHtml}</div>`;
   privateMessages.appendChild(row); scrollToBottomSoon(privateMessages);
 }
 
 privateSend.onclick = () => {
   const text = privateInput.value.trim(); if(!text || !privateChatWith) return;
   const key = chatId(username, privateChatWith);
-  db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now() });
+  db.ref(`privateChats/${key}`).push({ name:username, text, time:Date.now(), read: false });
   db.ref(`unread/${privateChatWith}/${username}`).transaction(c => (c||0)+1);
   privateInput.value = '';
 };
 
-closePrivate.onclick = () => { privatePopup.style.display='none'; privateChatWith=null; };
+closePrivate.onclick = () => { privatePopup.style.display='none'; privateChatWith=null; if(currentPrivateRef) currentPrivateRef.off(); };
 bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panelEl.classList.contains('open'); document.getElementById('app').style.transform = isOpen ? `translateX(-${panelEl.offsetWidth}px)` : ''; };
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
 
@@ -525,7 +552,15 @@ blockBtn.onclick = () => {
   ref.once('value', s => { if(s.exists()) ref.remove(); else ref.set(true); });
 };
 
-function refreshAvatars(){ document.querySelectorAll(`.avatar[data-username="${username}"]`).forEach(a => { a.innerHTML=''; if(profileImage){ const img=document.createElement('img'); img.src=profileImage; img.style.cssText='width:100%;height:100%;object-fit:cover'; a.appendChild(img); } else { a.textContent=username.charAt(0).toUpperCase(); } }); }
+profileImgInput.onchange = function(){
+  const file = this.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    profileImage = e.target.result; localStorage.setItem('profileImage', profileImage);
+    if(username) db.ref(`profiles/${username}`).update({ profileImage });
+    showToast('Profile updated');
+  }; reader.readAsDataURL(file);
+};
 
 window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } };
 </script>
