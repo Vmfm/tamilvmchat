@@ -38,7 +38,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .avatar{width:36px;height:36px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 8px;position:relative;cursor:pointer;border:2px solid transparent;transition:border .18s ease-in-out;overflow:hidden}
 .avatar.online{border-color:var(--accent);box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 1.5s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.6)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
-.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word}
+.bubble{background:var(--panel);padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.3;word-break:break-word;cursor:pointer;position:relative;}
 .msg-row.self .bubble{background:#005c4b}
 .meta{font-size:12px;color:#53bdeb;margin-bottom:4px;display:flex;align-items:center;gap:8px}
 .time{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px}
@@ -47,10 +47,21 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 
 #inputBar{display:flex;padding:10px;background:var(--panel);align-items:center;gap:8px}
 #messageInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff;outline:none;font-size:14px}
-#sendBtn{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
+#sendBtn, .emojiToggle{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;cursor:pointer}
+.emojiToggle{background:#2a3942; font-size: 20px;}
+
 #statusLine{padding:6px 12px;font-size:13px;color:var(--muted);background:#071215}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#2a3942;color:#fff;padding:10px 14px;border-radius:10px;z-index:999;opacity:0;transition:opacity .25s,bottom .25s}
 #toast.show{opacity:1;bottom:40px}
+
+/* EMOJI PICKER STYLE */
+.emoji-picker {
+  position: absolute; bottom: 70px; left: 10px; background: #202c33; border: 1px solid #3b4a54;
+  display: grid; grid-template-columns: repeat(6, 1fr); padding: 8px; border-radius: 8px; z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none;
+}
+.emoji-picker span { cursor: pointer; padding: 5px; font-size: 20px; transition: transform 0.1s; }
+.emoji-picker span:hover { transform: scale(1.2); }
 
 /* LOGIN */
 #loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:999}
@@ -72,7 +83,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
 .card{background:#0b141a;padding:12px;border-radius:12px;max-width:680px;width:96%;display:flex;flex-direction:column;max-height:92%}
 #privateHeader{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 #privateMessages{flex:1;overflow:auto;padding:8px;background:#071215;border-radius:8px;display:flex;flex-direction:column;gap:8px}
-.private-bubble{background:#162027;padding:8px 10px;border-radius:10px;max-width:80%}
+.private-bubble{background:#162027;padding:8px 10px;border-radius:10px;max-width:80%;cursor:pointer;}
 .private-row.self{align-self:flex-end}
 #privateInputBar{display:flex;gap:8px;margin-top:8px;align-items:center}
 #privateInput{flex:1;padding:10px;border-radius:22px;border:0;background:#2a3942;color:#fff}
@@ -164,7 +175,10 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
   <div id="statusLine"></div>
   <div id="messages" aria-live="polite"></div>
 
+  <div class="emoji-picker" id="emojiPicker"></div>
+
   <div id="inputBar">
+    <button class="emojiToggle" id="groupEmojiBtn">😊</button>
     <input id="messageInput" placeholder="Type a message" autocomplete="off"/>
     <button id="sendBtn">➤</button>
   </div>
@@ -193,7 +207,9 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
     </div>
     <div id="privateMessages"></div>
     <div id="typingPrivate" class="small"></div>
+    <div class="emoji-picker" id="privateEmojiPicker"></div>
     <div id="privateInputBar">
+      <button class="mediaBtn" id="privateEmojiBtn">😊</button>
       <input type="file" id="privImgFile" accept="image/*" style="display:none">
       <button class="mediaBtn" onclick="document.getElementById('privImgFile').click()" title="Send Image">📷</button>
       <button class="mediaBtn" id="micBtn" title="Voice Message (Max 10s)">🎤</button>
@@ -239,6 +255,22 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
+/* EMOJI DATA */
+const emojis = ['❤️','😂','😍','😭','😊','🔥','👍','🙌','✨','🙏','🤔','🤣','🙄','💔','🥺','✔️','❌','👋'];
+function initEmojiPicker(container, input) {
+  emojis.forEach(e => {
+    const span = document.createElement('span');
+    span.textContent = e;
+    span.onclick = () => { input.value += e; container.style.display = 'none'; input.focus(); };
+    container.appendChild(span);
+  });
+}
+initEmojiPicker(document.getElementById('emojiPicker'), document.getElementById('messageInput'));
+initEmojiPicker(document.getElementById('privateEmojiPicker'), document.getElementById('privateInput'));
+
+document.getElementById('groupEmojiBtn').onclick = (e) => { e.stopPropagation(); const p = document.getElementById('emojiPicker'); p.style.display = p.style.display === 'grid' ? 'none' : 'grid'; };
+document.getElementById('privateEmojiBtn').onclick = (e) => { e.stopPropagation(); const p = document.getElementById('privateEmojiPicker'); p.style.display = p.style.display === 'grid' ? 'none' : 'grid'; };
 
 /* DOM & STATE */
 const panelEl = document.getElementById('panel'), panelListEl = document.getElementById('panelList'), panelCloseBtn = document.getElementById('panelClose'), bellBtn = document.getElementById('bellBtn'), bellBadge = document.getElementById('bellBadge');
@@ -316,6 +348,14 @@ function formatTime(ms){ const d=new Date(ms); let h=d.getHours(), m=d.getMinute
 function scrollToBottomSoon(el){ setTimeout(()=> { el.scrollTop = el.scrollHeight; }, 80); }
 function chatId(a,b){ return [a,b].sort().join('_'); }
 
+/* DELETE LOGIC */
+function deleteGroupMsg(key) {
+  if(confirm("Delete this message for everyone?")) db.ref(`messages/${key}`).remove();
+}
+function deletePrivateMsg(chatKey, msgId) {
+  if(confirm("Delete this message?")) db.ref(`privateChats/${chatKey}/${msgId}`).remove();
+}
+
 /* SETTINGS LOGIC */
 function applySettingsToUI(){
   toggleCall.style.background = settings.audioCall ? '#25d366' : '#2a3942';
@@ -326,7 +366,10 @@ function applySettingsToUI(){
 }
 applySettingsToUI();
 settingsBtn.onclick = (e) => { e.stopPropagation(); settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block'; };
-document.onclick = (e) => { if(!settingsPanel.contains(e.target)) settingsPanel.style.display = 'none'; };
+document.addEventListener('click', (e) => { 
+  if(!settingsPanel.contains(e.target)) settingsPanel.style.display = 'none'; 
+  document.querySelectorAll('.emoji-picker').forEach(p => { if(!e.target.classList.contains('emojiToggle') && !e.target.classList.contains('mediaBtn')) p.style.display='none'; });
+});
 toggleCall.onclick = () => { settings.audioCall = !settings.audioCall; applySettingsToUI(); };
 togglePrivate.onclick = () => { settings.privateChat = !settings.privateChat; applySettingsToUI(); };
 
@@ -350,6 +393,10 @@ function startGroupListeners(){
   if(currentGroupRef) currentGroupRef.off(); messagesEl.innerHTML = '';
   currentGroupRef = db.ref('messages').limitToLast(50);
   currentGroupRef.on('child_added', snap => renderGroupMessage(snap.val(), snap.key));
+  currentGroupRef.on('child_removed', snap => {
+    const el = document.querySelector(`[data-key="${snap.key}"]`);
+    if(el) el.remove();
+  });
 }
 
 function renderGroupMessage(data, key){
@@ -363,6 +410,7 @@ function renderGroupMessage(data, key){
   const content=document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column';
   const meta=document.createElement('div'); meta.className='meta'; meta.textContent=data.name;
   const bubble=document.createElement('div'); bubble.className='bubble'; bubble.textContent=data.text;
+  if(isSelf) bubble.onclick = () => deleteGroupMsg(key);
   const t=document.createElement('div'); t.className='time'; t.textContent=formatTime(data.time);
   content.append(meta,bubble,t); row.append(avatar,content); messagesEl.appendChild(row); scrollToBottomSoon(messagesEl);
 }
@@ -394,12 +442,10 @@ function attachPrivateListener(chatKey){
   if(privateListeners.has(chatKey)) return;
   const chatRef = db.ref(`privateChats/${chatKey}`);
   
-  // Watch for new messages to trigger bell/unread
   const handler = chatRef.limitToLast(1).on('child_added', snap => {
     const msg = snap.val(); if(!msg || msg.name === username) return;
     const other = chatKey.split('_').find(x=>x!==username);
     if(privateChatWith === other && privatePopup.style.display === 'flex') {
-       // If chat open, mark as read immediately
        if(!msg.read) db.ref(`privateChats/${chatKey}/${snap.key}`).update({read: true});
     } else {
        bellFlash();
@@ -407,11 +453,15 @@ function attachPrivateListener(chatKey){
     refreshPanelList();
   });
   
-  // Watch for "read" status changes so sender sees blue checks
   chatRef.on('child_changed', snap => {
     const msg = snap.val();
     const msgEl = document.querySelector(`[data-msgid="${snap.key}"] .read-status`);
     if(msgEl && msg.read) msgEl.classList.add('read');
+  });
+
+  chatRef.on('child_removed', snap => {
+    const el = document.querySelector(`[data-msgid="${snap.key}"]`);
+    if(el) el.remove();
   });
 
   privateListeners.set(chatKey, { ref: chatRef, handler });
@@ -457,7 +507,6 @@ async function openPrivatePopup(other){
 
   const key = chatId(username, other);
   
-  // Mark all existing messages from "other" as read
   const snapshot = await db.ref(`privateChats/${key}`).once('value');
   snapshot.forEach(child => {
     const m = child.val();
@@ -496,9 +545,9 @@ function renderPrivateMessageWithId(chatKey, id, msg){
   row.className = 'private-row ' + (isSelf?'self':'');
   row.dataset.msgid = id;
 
-  let bodyContent = `<div class="private-bubble">${msg.text || ''}</div>`;
-  if(msg.image) bodyContent = `<div class="private-bubble"><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`;
-  if(msg.voice) bodyContent = `<div class="private-bubble"><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`;
+  let bodyContent = `<div class="private-bubble" ${isSelf ? `onclick="deletePrivateMsg('${chatKey}','${id}')"` : ''}>${msg.text || ''}</div>`;
+  if(msg.image) bodyContent = `<div class="private-bubble" ${isSelf ? `onclick="deletePrivateMsg('${chatKey}','${id}')"` : ''}><img src="${msg.image}" style="max-width:100%;border-radius:8px"></div>`;
+  if(msg.voice) bodyContent = `<div class="private-bubble" ${isSelf ? `onclick="deletePrivateMsg('${chatKey}','${id}')"` : ''}><audio controls src="${msg.voice}" style="height:34px;width:200px"></audio></div>`;
   
   const readClass = msg.read ? 'read' : '';
   const statusHtml = isSelf ? `<span class="read-status ${readClass}">✓✓</span>` : '';
@@ -586,7 +635,6 @@ blockBtn.onclick = () => {
 
 reportBtn.onclick = () => {
   showToast(`User ${privateChatWith} reported to admins.`);
-  // Log report to database if needed
   db.ref('reports').push({ by: username, reported: privateChatWith, time: Date.now() });
 };
 
