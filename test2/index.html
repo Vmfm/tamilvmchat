@@ -202,7 +202,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
       <button id="closePrivate" style="background:none;border:0;color:var(--accent);font-size:18px;cursor:pointer">⬅</button>
       <div style="font-weight:700" id="privateTitle">Private Chat</div>
       <div style="flex:1"></div>
-      <button id="callBtn" style="background:none;border:0;color:var(--accent);cursor:pointer;font-weight:700;margin-right:10px">📞</button>
+      <button id="callBtn" style="background:none;border:0;color:#25d366;cursor:pointer;font-weight:700;margin-right:10px;font-size:20px">📞</button>
       <button id="blockBtn" class="headerActionBtn not-blocked">Block</button>
       <button id="reportBtn" class="headerActionBtn" style="margin-left:8px">Report</button>
     </div>
@@ -236,6 +236,7 @@ body{margin:0;background:var(--bg);color:#e9edef;font-family:Arial,system-ui;min
   <button id="endCallBtn">End</button>
 </div>
 
+<audio id="remoteAudio" autoplay></audio>
 <audio id="ringtone" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" loop></audio>
 <audio id="dingAudio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="></audio>
 
@@ -277,6 +278,11 @@ const SETTINGS_KEY = 'chat_settings_v1';
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(typeof settings.audioCall === 'undefined') settings.audioCall = true;
 if(typeof settings.privateChat === 'undefined') settings.privateChat = true;
+
+/* WEBRTC REAL VOICE STATE */
+let peerConnection = null;
+let localStream = null;
+const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
 /* CUSTOM DELETE LOGIC */
 function openDeletePrompt(action) {
@@ -445,6 +451,10 @@ function listenUnreadForMe(){
   });
 }
 
+function listenUnreadAndPanel(){
+  // Already partially handled in watchPrivateChatsInitial
+}
+
 async function refreshPanelList(){
   panelListEl.innerHTML = '';
   const all = await db.ref('privateChats').once('value').then(s=>s.val()||{});
@@ -460,22 +470,14 @@ async function refreshPanelList(){
   });
 }
 
-/* MODIFIED CLEAR HISTORY - NO CONFIRMATION DIALOGUE */
 clearHistoryBtn.onclick = async () => { 
-  // 1. Clear unread counters
   await db.ref(`unread/${username}`).remove(); 
-  
-  // 2. Clear all messages in private chat rooms you are part of
   const allChatsSnap = await db.ref('privateChats').once('value');
   const allChats = allChatsSnap.val() || {};
-  
   const deletePromises = [];
   Object.keys(allChats).forEach(chatKey => {
-    if(chatKey.includes(username)) {
-      deletePromises.push(db.ref(`privateChats/${chatKey}`).remove());
-    }
+    if(chatKey.includes(username)) { deletePromises.push(db.ref(`privateChats/${chatKey}`).remove()); }
   });
-  
   await Promise.all(deletePromises);
   showToast("Chat history cleared"); 
   refreshPanelList(); 
@@ -537,7 +539,35 @@ bellBtn.onclick = () => { panelEl.classList.toggle('open'); const isOpen = panel
 panelCloseBtn.onclick = () => { panelEl.classList.remove('open'); document.getElementById('app').style.transform = ''; };
 function bellFlash(){ try{dingAudio.play();}catch(e){} }
 
-/* CALLS */
+/* REAL VOICE WEBRTC CALLS */
+async function setupWebRTC(callId, isCaller) {
+  peerConnection = new RTCPeerConnection(rtcConfig);
+  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+  peerConnection.ontrack = (event) => {
+    document.getElementById('remoteAudio').srcObject = event.streams[0];
+  };
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      db.ref(`calls/${callId}/candidates/${username}`).push(event.candidate.toJSON());
+    }
+  };
+
+  // Watch for remote candidates
+  const other = activeCall.from === username ? activeCall.to : activeCall.from;
+  db.ref(`calls/${callId}/candidates/${other}`).on('child_added', snap => {
+    peerConnection.addIceCandidate(new RTCIceCandidate(snap.val()));
+  });
+
+  if (isCaller) {
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    db.ref(`calls/${callId}`).update({ offer: { sdp: offer.sdp, type: offer.type } });
+  }
+}
+
 function watchCallsForMe(){
   db.ref('calls').on('child_added', snap => {
     const c = snap.val(); if(c.to === username && c.status === 'ringing') {
@@ -546,20 +576,39 @@ function watchCallsForMe(){
     }
   });
   db.ref('calls').on('child_changed', snap => {
-    const c = snap.val(); if(c.status === 'ended' || c.status === 'declined') cleanupCall();
-    if(c.status === 'answered' && (c.from === username || c.to === username)) startInCallTimer(c);
+    const c = snap.val(); 
+    if(c.status === 'ended' || c.status === 'declined') cleanupCall();
+    if(c.status === 'answered' && (c.from === username || c.to === username)) {
+      startInCallTimer(c);
+      if (c.to === username) handleIncomingAnswer(snap.key, c);
+    }
+    if(c.answer && c.from === username && peerConnection) {
+        peerConnection.setRemoteDescription(new RTCSessionDescription(c.answer));
+    }
   });
 }
 
-callBtn.onclick = () => {
+async function handleIncomingAnswer(callId, c) {
+  await setupWebRTC(callId, false);
+  await peerConnection.setRemoteDescription(new RTCSessionDescription(c.offer));
+  const answer = await peerConnection.createAnswer();
+  await peerConnection.setLocalDescription(answer);
+  db.ref(`calls/${callId}`).update({ answer: { sdp: answer.sdp, type: answer.type } });
+}
+
+callBtn.onclick = async () => {
   if(!settings.audioCall) return showToast('Calls disabled');
-  const id = `${chatId(username, privateChatWith)}_${Date.now()}`;
+  const id = `call_${Date.now()}`;
+  activeCall = { id, from: username, to: privateChatWith };
   db.ref(`calls/${id}`).set({ from:username, to:privateChatWith, status:'ringing', startedAt:Date.now() });
-  activeCall = { id }; callOverlay.style.display='flex'; callFrom.textContent=privateChatWith; ringtone.play();
+  callOverlay.style.display='flex'; callFrom.textContent=privateChatWith; ringtone.play();
+  setupWebRTC(id, true);
 };
+
 acceptCallBtn.onclick = () => db.ref(`calls/${activeCall.id}`).update({ status:'answered', answeredAt:Date.now() });
 declineCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'declined' }); cleanupCall(); };
 endCallBtn.onclick = () => { db.ref(`calls/${activeCall.id}`).update({ status:'ended' }); cleanupCall(); };
+
 function startInCallTimer(c){
   ringtone.pause(); callOverlay.style.display='none'; inCallBar.style.display='flex'; inCallWith.textContent = c.from === username ? c.to : c.from;
   clearInterval(callTimerInterval);
@@ -569,7 +618,15 @@ function startInCallTimer(c){
     inCallElapsed.textContent = `${m}:${s}`;
   }, 1000);
 }
-function cleanupCall(){ ringtone.pause(); ringtone.currentTime=0; callOverlay.style.display='none'; inCallBar.style.display='none'; clearInterval(callTimerInterval); activeCall = null; }
+
+function cleanupCall(){ 
+  ringtone.pause(); ringtone.currentTime=0; 
+  callOverlay.style.display='none'; inCallBar.style.display='none'; 
+  clearInterval(callTimerInterval); 
+  if(peerConnection) { peerConnection.close(); peerConnection = null; }
+  if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  activeCall = null; 
+}
 
 function listenBlocks(){ 
   db.ref(`blocks/${username}`).on('value', s => {
@@ -581,6 +638,7 @@ function listenBlocks(){
     }
   }); 
 }
+
 blockBtn.onclick = () => {
   const ref = db.ref(`blocks/${username}/${privateChatWith}`);
   ref.once('value', s => { 
@@ -588,7 +646,9 @@ blockBtn.onclick = () => {
     else { ref.set(true); showToast(`${privateChatWith} blocked`); }
   });
 };
+
 reportBtn.onclick = () => { showToast(`User ${privateChatWith} reported to admins.`); db.ref('reports').push({ by: username, reported: privateChatWith, time: Date.now() }); };
+
 profileImgInput.onchange = function(){
   const file = this.files[0]; if(!file) return;
   const reader = new FileReader();
@@ -598,6 +658,7 @@ profileImgInput.onchange = function(){
     showToast('Profile updated');
   }; reader.readAsDataURL(file);
 };
+
 window.onbeforeunload = () => { if(username){ db.ref(`status/${username}`).remove(); db.ref(`profiles/${username}/online`).remove(); } };
 </script>
 </body>
